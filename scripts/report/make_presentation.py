@@ -52,6 +52,8 @@ an_val  = predict_anomaly(df, "2022-01-01", "2022-12-31")
 
 print("▶ 계량기 결과 로드 중...")
 meters  = pd.read_csv("outputs/all_meters_results.csv")
+print("▶ 에너지 7종 결과 로드 중...")
+energy_results = pd.read_csv("outputs/all_energy_results.csv")
 
 # ── 색상 팔레트 ───────────────────────────────────────────────────────────────
 C_ACTUAL    = "#2563EB"   # blue
@@ -353,17 +355,17 @@ def fig_seasonal_pattern() -> go.Figure:
 #  FIG 9 : val vs test 성능 비교 (모델별)
 # ════════════════════════════════════════════════════════════════════
 def fig_val_vs_test() -> go.Figure:
-    summary = pd.DataFrame([
-        {"모델": "VMD-LSTM\n(grid_P)",  "val_mape": 25.5,  "test_mape": 57.4},
-    ])
+    er = energy_results[energy_results["status"] == "OK"]
+    gp = er[er["target"] == "grid_P"].iloc[0]
 
     ok = meters[meters["status"] == "OK"]
-    meter_summary = pd.DataFrame([
-        {"모델": "계량기 평균\n(80개)", "val_mape": ok["val_mape"].median(), "test_mape": ok["test_mape"].median()},
-        {"모델": "계량기 상위25%",       "val_mape": ok["val_mape"].quantile(0.25), "test_mape": ok["test_mape"].quantile(0.25)},
-        {"모델": "계량기 하위25%",       "val_mape": ok["val_mape"].quantile(0.75), "test_mape": ok["test_mape"].quantile(0.75)},
+    summary = pd.DataFrame([
+        {"모델": "grid_P\n(VMD-LSTM)",     "val_mape": gp["val_mape"],           "test_mape": gp["test_mape"]},
+        {"모델": "에너지 7종\n(평균)",       "val_mape": er["val_mape"].mean(),    "test_mape": er["test_mape"].mean()},
+        {"모델": "계량기 중앙값\n(80개)",    "val_mape": ok["val_mape"].median(),  "test_mape": ok["test_mape"].median()},
+        {"모델": "계량기 상위25%",           "val_mape": ok["val_mape"].quantile(0.25), "test_mape": ok["test_mape"].quantile(0.25)},
+        {"모델": "계량기 하위25%",           "val_mape": ok["val_mape"].quantile(0.75), "test_mape": ok["test_mape"].quantile(0.75)},
     ])
-    summary = pd.concat([summary, meter_summary], ignore_index=True)
 
     fig = go.Figure()
     fig.add_trace(go.Bar(
@@ -378,9 +380,44 @@ def fig_val_vs_test() -> go.Figure:
     fig.update_layout(
         **BASE_LAYOUT,
         barmode="group",
-        title="<b>Val vs Test MAPE 비교</b><br>"
+        title="<b>Val vs Test MAPE 비교 — 전 모델</b><br>"
               "<sub>2022→2023 성능 저하 = 소비 패턴 분포 이동(Distribution Shift)</sub>",
         yaxis_title="MAPE (%)",
+    )
+    return fig
+
+
+# ════════════════════════════════════════════════════════════════════
+#  FIG 10 : 에너지 7종 Val/Test MAPE 비교
+# ════════════════════════════════════════════════════════════════════
+def fig_energy_results() -> go.Figure:
+    er = energy_results[energy_results["status"] == "OK"].copy()
+    label_map = {
+        "grid_P": "grid_P\n(총 전력)", "pv_gen": "pv_gen\n(태양광)",
+        "chp_gen": "chp_gen\n(열병합)", "cool_P": "cool_P\n(냉방)",
+        "cool_elec_P": "cool_elec_P\n(냉동기)", "heat_P": "heat_P\n(난방)",
+        "chp_heat_P": "chp_heat_P\n(열병합열)",
+    }
+    er["label"] = er["target"].map(label_map).fillna(er["target"])
+
+    fig = make_subplots(rows=1, cols=2,
+                        subplot_titles=("MAPE (%)", "WAPE (%)"),
+                        horizontal_spacing=0.12)
+
+    fig.add_trace(go.Bar(x=er["label"], y=er["val_mape"].clip(upper=150),
+                         name="Val MAPE", marker_color=C_ACTUAL), row=1, col=1)
+    fig.add_trace(go.Bar(x=er["label"], y=er["test_mape"].clip(upper=150),
+                         name="Test MAPE", marker_color=C_PRED), row=1, col=1)
+    fig.add_trace(go.Bar(x=er["label"], y=er["val_wape"],
+                         name="Val WAPE", marker_color="#7C3AED", showlegend=True), row=1, col=2)
+    fig.add_trace(go.Bar(x=er["label"], y=er["test_wape"],
+                         name="Test WAPE", marker_color="#DB2777", showlegend=True), row=1, col=2)
+
+    fig.update_layout(
+        **BASE_LAYOUT,
+        barmode="group",
+        title="<b>에너지 7종 예측 성능</b><br>"
+              "<sub>MAPE cap 150% · WAPE = 가중 절대 퍼센트 오차</sub>",
     )
     return fig
 
@@ -391,15 +428,16 @@ def fig_val_vs_test() -> go.Figure:
 
 def build_html() -> str:
     figures = {
-        "fig1": fig_forecast_val(),
-        "fig2": fig_forecast_test(),
-        "fig3": fig_anomaly_zoom(),
-        "fig4": fig_residual_dist(),
-        "fig5": fig_meter_heatmap(),
-        "fig6": fig_meter_scatter(),
-        "fig7": fig_energy_correlation(),
-        "fig8": fig_seasonal_pattern(),
-        "fig9": fig_val_vs_test(),
+        "fig1":  fig_forecast_val(),
+        "fig2":  fig_forecast_test(),
+        "fig3":  fig_anomaly_zoom(),
+        "fig4":  fig_residual_dist(),
+        "fig5":  fig_meter_heatmap(),
+        "fig6":  fig_meter_scatter(),
+        "fig7":  fig_energy_correlation(),
+        "fig8":  fig_seasonal_pattern(),
+        "fig9":  fig_val_vs_test(),
+        "fig10": fig_energy_results(),
     }
 
     divs = {k: v.to_html(full_html=False, include_plotlyjs=False)
@@ -408,6 +446,8 @@ def build_html() -> str:
     ok = meters[meters["status"] == "OK"]
     n_good = (ok["test_mape"] < 20).sum()
     n_bad  = (ok["test_mape"] > 100).sum()
+    er = energy_results[energy_results["status"] == "OK"]
+    gp = er[er["target"] == "grid_P"].iloc[0]
 
     html = f"""<!DOCTYPE html>
 <html lang="ko">
@@ -471,7 +511,7 @@ def build_html() -> str:
   <div class="grid-3">
     <div class="kpi green"><div class="val">2</div><div class="lbl">핵심 태스크<br>(예측 + 이상탐지)</div></div>
     <div class="kpi green"><div class="val">80</div><div class="lbl">학습 완료 계량기</div></div>
-    <div class="kpi yellow"><div class="val">7</div><div class="lbl">분석 에너지 타입<br>(학습 예정)</div></div>
+    <div class="kpi green"><div class="val">7</div><div class="lbl">에너지 타입<br>(학습 완료)</div></div>
   </div>
   <br>
   <table>
@@ -479,7 +519,7 @@ def build_html() -> str:
     <tr><td>총 전력 예측</td><td>VMD-LSTM</td><td>VMD(K=4) 분해 → 2-layer LSTM + Attention</td><td><span class="tag good">학습 완료</span></td></tr>
     <tr><td>이상탐지</td><td>Residual + IF</td><td>예측 잔차 임계치 + Isolation Forest 앙상블</td><td><span class="tag good">학습 완료</span></td></tr>
     <tr><td>개별 계량기 예측</td><td>VMD-LSTM × 80</td><td>계량기별 독립 학습 (13 피처)</td><td><span class="tag good">학습 완료</span></td></tr>
-    <tr><td>에너지 전체 예측</td><td>VMD-LSTM × 7</td><td>냉방/난방/태양광 등 7종</td><td><span class="tag warn">RunPod 학습 예정</span></td></tr>
+    <tr><td>에너지 전체 예측</td><td>VMD-LSTM × 7</td><td>냉방/난방/태양광 등 7종 (21 피처)</td><td><span class="tag good">학습 완료</span></td></tr>
   </table>
   <br>
   <div style="background:#F8FAFC;padding:18px;border-radius:8px;font-size:.92rem;">
@@ -494,12 +534,12 @@ def build_html() -> str:
   <h2>② grid_P (총 전력 소비) 예측 결과</h2>
   <div class="grid-2" style="margin-bottom:24px;">
     <div class="kpi green">
-      <div class="val">25.5%</div>
-      <div class="lbl">Val MAPE (2022)<br>MAE 22,460 W</div>
+      <div class="val">{gp['val_mape']:.1f}%</div>
+      <div class="lbl">Val MAPE (2022)<br>MAE {gp['val_mae']:,.0f} W</div>
     </div>
     <div class="kpi red">
-      <div class="val">57.4%</div>
-      <div class="lbl">Test MAPE (2023)<br>MAE 26,252 W</div>
+      <div class="val">{gp['test_mape']:.1f}%</div>
+      <div class="lbl">Test MAPE (2023)<br>MAE {gp['test_mae']:,.0f} W</div>
     </div>
   </div>
   {divs['fig1']}
@@ -556,9 +596,46 @@ def build_html() -> str:
   </div>
 </section>
 
-<!-- ⑤ 에너지 흐름 분석 -->
+<!-- ⑤ 에너지 7종 예측 결과 -->
 <section>
-  <h2>⑤ 에너지 흐름 분석</h2>
+  <h2>⑤ 에너지 7종 예측 결과 (냉방 · 난방 · 태양광 · 열병합)</h2>
+  <div class="grid-3" style="margin-bottom:24px;">
+    <div class="kpi green">
+      <div class="val">{(er['val_mape'] < 20).sum()}종</div>
+      <div class="lbl">우수 (Val MAPE &lt; 20%)</div>
+    </div>
+    <div class="kpi yellow">
+      <div class="val">{er['val_wape'].mean():.1f}%</div>
+      <div class="lbl">Val WAPE 평균</div>
+    </div>
+    <div class="kpi green">
+      <div class="val">{len(er)}종</div>
+      <div class="lbl">학습 완료</div>
+    </div>
+  </div>
+  {divs['fig10']}
+  <br>
+  <table>
+    <tr><th>타겟</th><th>설명</th><th>Val MAE</th><th>Val MAPE</th><th>Val WAPE</th><th>Val F1</th><th>Test MAPE</th></tr>
+    {''.join(f"""<tr>
+      <td><b>{r.target}</b></td>
+      <td>{"총 전력" if r.target=="grid_P" else "태양광" if r.target=="pv_gen" else "열병합(전기)" if r.target=="chp_gen" else "냉방 총" if r.target=="cool_P" else "냉동기" if r.target=="cool_elec_P" else "난방 총" if r.target=="heat_P" else "열병합(열)"}</td>
+      <td>{r.val_mae/1000:.1f} kW</td>
+      <td>{"<span class='tag good'>" if r.val_mape<20 else "<span class='tag warn'>" if r.val_mape<50 else "<span class='tag bad'>"}{r.val_mape:.1f}%</span></td>
+      <td>{r.val_wape:.1f}%</td>
+      <td>{r.val_f1:.3f}</td>
+      <td>{"<span class='tag good'>" if r.test_mape<30 else "<span class='tag warn'>" if r.test_mape<100 else "<span class='tag bad'>"}{r.test_mape:.1f}%</span></td>
+    </tr>""" for r in er.itertuples())}
+  </table>
+  <div class="verdict warn" style="margin-top:16px;">
+    <b>인사이트:</b> cool_P · cool_elec_P는 MAPE 15~18%로 가장 안정적입니다.
+    heat_P · chp_gen · chp_heat_P는 Test MAPE가 높아 2023년 운영 패턴 변화의 영향을 받은 것으로 보입니다.
+  </div>
+</section>
+
+<!-- ⑥ 에너지 흐름 분석 -->
+<section>
+  <h2>⑥ 에너지 흐름 분석</h2>
   <div class="grid-2">
     <div>{divs['fig7']}</div>
     <div>{divs['fig8']}</div>
@@ -570,22 +647,22 @@ def build_html() -> str:
   </div>
 </section>
 
-<!-- ⑥ Val vs Test 비교 -->
+<!-- ⑦ Val vs Test 비교 -->
 <section>
-  <h2>⑥ 모델 적합성 종합 평가</h2>
+  <h2>⑦ 모델 적합성 종합 평가</h2>
   {divs['fig9']}
   <br>
   <table>
     <tr><th>평가 항목</th><th>현재 상태</th><th>판정</th><th>개선 방향</th></tr>
     <tr>
       <td>예측 정확도 (Val)</td>
-      <td>grid_P MAPE 25.5% · 계량기 중앙값 56%</td>
+      <td>grid_P MAPE {gp['val_mape']:.1f}% · 계량기 중앙값 {ok['val_mape'].median():.0f}%</td>
       <td><span class="tag good">양호</span></td>
       <td>하이퍼파라미터 추가 튜닝</td>
     </tr>
     <tr>
       <td>예측 정확도 (Test)</td>
-      <td>grid_P MAPE 57.4% · 계량기 중앙값 77%</td>
+      <td>grid_P MAPE {gp['test_mape']:.1f}% · 계량기 중앙값 {ok['test_mape'].median():.0f}%</td>
       <td><span class="tag bad">개선 필요</span></td>
       <td>연간 재학습 · 2022 데이터 학습 포함</td>
     </tr>
@@ -602,10 +679,10 @@ def build_html() -> str:
       <td>API 서빙 추가 고려</td>
     </tr>
     <tr>
-      <td>확장성</td>
-      <td>7종 에너지 타입 학습 코드 완성</td>
-      <td><span class="tag good">준비됨</span></td>
-      <td>RunPod 실행 후 결과 추가</td>
+      <td>확장성 (에너지 7종)</td>
+      <td>VMD-LSTM × 7 학습 완료 · Val WAPE 평균 {er['val_wape'].mean():.1f}%</td>
+      <td><span class="tag good">완성</span></td>
+      <td>연간 재학습 스케줄 도입</td>
     </tr>
   </table>
 
