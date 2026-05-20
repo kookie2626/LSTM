@@ -1,0 +1,28 @@
+# 환경 변수 (DB 비밀번호 포함 — 절대 올리지 말 것)
+.env
+
+# 가상환경
+.venv_gemini/
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.cache/
+
+# 학습된 모델 파일 (RunPod에서 직접 학습)
+outputs/models/
+
+# MLflow 로컬 추적 로그
+mlruns/
+
+# Claude Code 설정
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb

@@ -1,0 +1,11 @@
+# RunPod 환경 설치 패키지 목록
+# pip install -r requirements_runpod.txt
+
+torch
+numpy
+pandas
+scikit-learn
+vmdpy
+mlflow
+psycopg[binary]
+python-dotenv
