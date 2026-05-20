@@ -16,9 +16,10 @@ import sys
 from pathlib import Path
 from dotenv import load_dotenv
 
-load_dotenv()
-os.chdir(Path(__file__).resolve().parents[2])
-sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+_ROOT = Path(__file__).resolve().parents[2]
+load_dotenv(_ROOT / ".env")
+os.chdir(_ROOT)
+sys.path.insert(0, str(_ROOT.parent))
 
 import numpy as np
 import pandas as pd
@@ -81,6 +82,156 @@ meters = pd.read_csv("outputs/all_meters_results.csv")
 print("▶ 에너지 7종 결과 로드 중...")
 energy_results = pd.read_csv("outputs/all_energy_results.csv")
 
+
+# ── VMD 분해 캐시 로드/생성 ─────────────────────────────────────────────────────
+def _load_or_vmd() -> pd.DataFrame | None:
+    vmd_path = CACHE_DIR / "vmd_imfs.parquet"
+    if vmd_path.exists():
+        return pd.read_parquet(vmd_path)
+    if not ONLINE:
+        return None
+    try:
+        from vmdpy import VMD
+        from project.ML.data_loader import load_raw, add_features
+        _df = load_raw(); _df = add_features(_df)
+        # 2022년 1~3월만 사용 (VMD 속도)
+        sub = _df.loc["2022-01-01":"2022-03-31", "grid_P"].fillna(0).values
+        u, _, _ = VMD(sub, alpha=2000, tau=0, K=4, DC=0, init=1, tol=1e-7)
+        idx = _df.loc["2022-01-01":"2022-03-31"].index
+        df_imf = pd.DataFrame(u.T, index=idx[:len(u[0])],
+                              columns=[f"IMF{i+1}" for i in range(4)])
+        df_imf["grid_P"] = sub[:len(u[0])]
+        df_imf.to_parquet(vmd_path)
+        return df_imf
+    except Exception as e:
+        print(f"  ⚠ VMD 실패 ({e.__class__.__name__})")
+        return None
+
+print("▶ VMD 분해 캐시 확인 중...")
+vmd_df = _load_or_vmd()
+
+
+# ── 계량기 시계열 캐시 로드/생성 ────────────────────────────────────────────────
+def _load_or_meter_ts() -> dict | None:
+    best_path = CACHE_DIR / "meter_best.parquet"
+    ze_path   = CACHE_DIR / "meter_ze.parquet"
+    if best_path.exists() and ze_path.exists():
+        return {"best": pd.read_parquet(best_path), "ze": pd.read_parquet(ze_path)}
+    if not ONLINE:
+        return None
+    try:
+        import psycopg, torch, pickle
+        from project.ML.inference import LSTMForecaster
+
+        DB = dict(host=os.environ["DB_HOST"], port=int(os.environ["DB_PORT"]),
+                  user=os.environ["DB_USER"], password=os.environ["DB_PASSWORD"],
+                  dbname=os.environ["DB_NAME"])
+
+        BEST_URN = "H2.Z63"
+        ZE_URN   = "H2.ZE65"
+
+        # 날씨 피처는 aggregate 테이블에서
+        sql_agg = """
+            SELECT ts,
+                   MAX(CASE WHEN measurement='Ta'  THEN value END) AS "Ta",
+                   MAX(CASE WHEN measurement='Igm' THEN value END) AS "Igm"
+            FROM ems.reduced_measurement_1h
+            WHERE ts >= '2021-07-01' AND ts < '2023-01-01'
+              AND measurement IN ('Ta','Igm')
+            GROUP BY ts ORDER BY ts
+        """
+        sql_meter = """
+            SELECT ts, meter_urn, value AS "target_P"
+            FROM ems.cr_measurement_1h
+            WHERE meter_urn IN ('{best}','{ze}')
+              AND measurement = 'P'
+              AND ts >= '2021-07-01' AND ts < '2023-01-01'
+            ORDER BY ts
+        """.format(best=BEST_URN, ze=ZE_URN)
+
+        with psycopg.connect(**DB) as conn:
+            agg  = pd.read_sql(sql_agg,   conn, index_col="ts", parse_dates=["ts"])
+            mraw = pd.read_sql(sql_meter, conn, parse_dates=["ts"])
+
+        # 계량기 모델은 FC(hidden→64→1) — inference.py LSTMForecaster와 다름
+        import torch.nn as nn
+        class _MeterLSTM(nn.Module):
+            def __init__(self, input_dim, hidden_dim, num_layers, dropout, **_):
+                super().__init__()
+                self.lstm = nn.LSTM(input_dim, hidden_dim, num_layers,
+                                    batch_first=True,
+                                    dropout=dropout if num_layers > 1 else 0.0)
+                class _Attn(nn.Module):
+                    def __init__(self, h):
+                        super().__init__(); self.w = nn.Linear(h, 1)
+                    def forward(self, x):
+                        a = torch.softmax(self.w(x), dim=1)
+                        return (a * x).sum(dim=1)
+                self.attn = _Attn(hidden_dim)
+                self.fc = nn.Sequential(
+                    nn.Linear(hidden_dim, 64), nn.GELU(),
+                    nn.Dropout(dropout), nn.Linear(64, 1))
+            def forward(self, x):
+                out, _ = self.lstm(x)
+                return self.fc(self.attn(out)).squeeze(-1)
+
+        def _run_meter(urn):
+            mdir = Path("outputs/models/meters") / urn.replace(".", "_")
+            ckpt = torch.load(mdir / "vmd_lstm.pt", map_location="cpu", weights_only=False)
+            cfg  = ckpt["model_config"]
+            scaler = pickle.load(open(mdir / "vmd_lstm_scaler.pkl", "rb"))
+
+            model = _MeterLSTM(**cfg)
+            model.load_state_dict(ckpt["model_state"])
+            model.eval()
+
+            sub = mraw[mraw["meter_urn"] == urn].set_index("ts")[["target_P"]]
+            sub = sub.join(agg, how="left").fillna(0)
+
+            # 시간 피처
+            sub["hour_sin"]  = np.sin(2*np.pi*sub.index.hour/24)
+            sub["hour_cos"]  = np.cos(2*np.pi*sub.index.hour/24)
+            sub["dow_sin"]   = np.sin(2*np.pi*sub.index.dayofweek/7)
+            sub["dow_cos"]   = np.cos(2*np.pi*sub.index.dayofweek/7)
+            sub["month_sin"] = np.sin(2*np.pi*sub.index.month/12)
+            sub["month_cos"] = np.cos(2*np.pi*sub.index.month/12)
+            # lag 피처
+            for lag in [24, 48, 168, 336]:
+                sub[f"target_P_lag{lag}h"] = sub["target_P"].shift(lag).fillna(0)
+
+            feat_cols = cfg["feature_cols"]
+            seq_len   = cfg["seq_len"]
+            X = scaler["scaler_X"].transform(sub[feat_cols].values)
+            y_scaler  = scaler["scaler_y"]
+
+            preds, actuals, idx_out = [], [], []
+            with torch.no_grad():
+                for i in range(seq_len, len(X)):
+                    seq = torch.tensor(X[i-seq_len:i], dtype=torch.float32).unsqueeze(0)
+                    p   = model(seq).item()
+                    preds.append(float(y_scaler.inverse_transform([[p]])[0][0]))
+                    actuals.append(float(sub["target_P"].iloc[i]))
+                    idx_out.append(sub.index[i])
+
+            result = pd.DataFrame({"actual": actuals, "predicted": preds}, index=idx_out)
+            return result.loc["2022-01-01":"2022-12-31"]
+
+        print("  계량기 추론: 우수 계량기...")
+        best_ts = _run_meter(BEST_URN)
+        print("  계량기 추론: ZE 계량기...")
+        ze_ts   = _run_meter(ZE_URN)
+
+        best_ts.to_parquet(best_path)
+        ze_ts.to_parquet(ze_path)
+        return {"best": best_ts, "ze": ze_ts}
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        print(f"  ⚠ 계량기 추론 실패 ({e.__class__.__name__})")
+        return None
+
+print("▶ 계량기 시계열 캐시 확인 중...")
+meter_ts = _load_or_meter_ts()
+
 # ── 동적 지표 계산 ─────────────────────────────────────────────────────────────
 print("▶ 지표 계산 중...")
 
@@ -109,7 +260,7 @@ if ONLINE:
     _tz = an_val.index.tz
     def _ts(s): return pd.Timestamp(s).tz_localize(_tz) if _tz and pd.Timestamp(s).tzinfo is None else pd.Timestamp(s)
     _fail_mask  = (an_val.index >= _ts("2022-05-06")) & (an_val.index <= _ts("2022-07-14"))
-    _y_true     = _fail_mask.astype(int).values
+    _y_true     = _fail_mask.astype(int)
     _y_high     = (an_val["anomaly_level"] == "HIGH").astype(int).values
     _y_any      = (an_val["anomaly_level"] != "NORMAL").astype(int).values
     _an_f1_high    = float(f1_score(_y_true, _y_high, zero_division=0))
@@ -144,6 +295,33 @@ print(f"  grid_P val MAPE={_fc_val_mape:.1f}%  test MAPE={_fc_test_mape:.1f}%")
 if ONLINE:
     print(f"  이상탐지 F1(HIGH)={_an_f1_high:.3f}  F1(HIGH+LOW)={_an_f1_any:.3f}")
 print(f"  계량기 우수:{_n_good} 보통:{_n_mid} 저조:{_n_bad}  (오프라인={not ONLINE})")
+
+# ── grid_P WAPE: 온라인 계산값으로 에너지 표도 일치시킴 ─────────────────────────
+_gp_val_wape  = _fc_val_wape  if ONLINE else float(gp["val_wape"])
+_gp_test_wape = _fc_test_wape if ONLINE else float(gp["test_wape"])
+
+er_display = er.copy()
+if ONLINE:
+    er_display.loc[er_display["target"] == "grid_P", "val_wape"]  = _fc_val_wape
+    er_display.loc[er_display["target"] == "grid_P", "test_wape"] = _fc_test_wape
+
+# ── 계량기 test_wape 이상값 필터 (>500%: H1.K12, H1.Z28 — 실제값≈0 구간) ────────
+_wape_thresh  = 500
+_ok_normal    = ok[ok["test_wape"] <= _wape_thresh].copy()
+_n_outlier    = int((ok["test_wape"] > _wape_thresh).sum())
+_test_wape_med_clean = float(_ok_normal["test_wape"].median())
+
+# ── 계량기 평가 가능 수 (test_mape NaN 제외) ─────────────────────────────────────
+_n_eval   = int(ok["test_mape"].notna().sum())   # 실제 평가 가능
+_n_no_eval = int(ok["test_mape"].isna().sum())   # NaN (평가 불가)
+
+# ── 에너지 WAPE 평균: er_display 기준으로 통일 ───────────────────────────────────
+_er_val_wape_mean  = float(er_display["val_wape"].mean())
+_er_test_wape_mean = float(er_display["test_wape"].mean())
+
+# ── Val/Test 실제 추론 행수 ──────────────────────────────────────────────────────
+_val_rows  = len(fc_val)  if ONLINE else 8713
+_test_rows = len(fc_test) if ONLINE else 8713
 
 # ── 색상 팔레트 ───────────────────────────────────────────────────────────────
 C_ACTUAL = "#2563EB"
@@ -283,10 +461,11 @@ def fig_anomaly_metrics() -> go.Figure:
                          text=[f"{v:.1f}%" for v in vals_any], textposition="outside"))
     fig.add_hline(y=70, line_dash="dash", line_color="#16A34A",
                   annotation_text="목표 70%", annotation_position="right")
-    fig.update_layout(**BASE_LAYOUT, barmode="group", yaxis_range=[0, 110],
+    fig.update_layout(**{**BASE_LAYOUT, "legend": dict(orientation="h", y=-0.2)},
+        barmode="group", yaxis_range=[0, 110],
         title=f"<b>이상탐지 정량 평가 — 장애 구간 대비</b><br>"
               f"<sub>HIGH F1={_an_f1_high:.3f} · HIGH+LOW F1={_an_f1_any:.3f} · pseudo-label 2022-05-06~07-14</sub>",
-        yaxis_title="성능 (%)", legend=dict(orientation="h", y=-0.2))
+        yaxis_title="성능 (%)")
     return fig
 
 
@@ -424,11 +603,11 @@ def fig_seasonal_pattern() -> go.Figure:
 # ════════════════════════════════════════════════════════════════════
 def fig_val_vs_test() -> go.Figure:
     summary = pd.DataFrame([
-        {"모델":"grid_P\n(VMD-LSTM)",    "val_wape":float(gp["val_wape"]),         "test_wape":float(gp["test_wape"])},
-        {"모델":"에너지 7종\n(WAPE 평균)","val_wape":er["val_wape"].mean(),         "test_wape":er["test_wape"].mean()},
-        {"모델":"계량기 중앙값\n(80개)",  "val_wape":ok["val_wape"].median(),       "test_wape":ok["test_wape"].median()},
-        {"모델":"계량기 상위25%",         "val_wape":ok["val_wape"].quantile(0.25),"test_wape":ok["test_wape"].quantile(0.25)},
-        {"모델":"계량기 하위25%",         "val_wape":ok["val_wape"].quantile(0.75),"test_wape":ok["test_wape"].quantile(0.75)},
+        {"모델":"grid_P\n(VMD-LSTM)",    "val_wape":_gp_val_wape,                          "test_wape":_gp_test_wape},
+        {"모델":"에너지 7종\n(WAPE 평균)","val_wape":er_display["val_wape"].mean(),          "test_wape":er_display["test_wape"].mean()},
+        {"모델":"계량기 중앙값\n(80개)",  "val_wape":ok["val_wape"].median(),                "test_wape":_ok_normal["test_wape"].median()},
+        {"모델":"계량기 상위25%",         "val_wape":ok["val_wape"].quantile(0.25),         "test_wape":_ok_normal["test_wape"].quantile(0.25)},
+        {"모델":"계량기 하위25%",         "val_wape":ok["val_wape"].quantile(0.75),         "test_wape":_ok_normal["test_wape"].quantile(0.75)},
     ])
     fig = go.Figure()
     fig.add_trace(go.Bar(x=summary["모델"], y=summary["val_wape"], name="Val WAPE (2022)",
@@ -476,6 +655,144 @@ def fig_energy_results() -> go.Figure:
 
 
 # ════════════════════════════════════════════════════════════════════
+#  FIG 13 : VMD 분해 결과 (원신호 + IMF 4개)
+# ════════════════════════════════════════════════════════════════════
+def fig_vmd_decomp() -> go.Figure:
+    if vmd_df is None:
+        return PLACEHOLDER_FIG
+    # 2주치만 시각화 (336h)
+    sub = vmd_df.iloc[:336]
+    days = sub.index
+
+    fig = make_subplots(rows=5, cols=1, shared_xaxes=True,
+        subplot_titles=("원신호 (grid_P)", "IMF 1 — 장주기 트렌드",
+                        "IMF 2 — 주간 주기", "IMF 3 — 일간 주기", "IMF 4 — 고주파 노이즈"),
+        vertical_spacing=0.06)
+
+    colors = [C_ACTUAL, "#7C3AED", "#059669", "#D97706", "#DC2626"]
+    labels = ["grid_P", "IMF1", "IMF2", "IMF3", "IMF4"]
+    series = [sub["grid_P"]] + [sub[f"IMF{i+1}"] for i in range(4)]
+
+    for row, (s, c, lbl) in enumerate(zip(series, colors, labels), start=1):
+        fig.add_trace(go.Scatter(x=days, y=s/1000, name=lbl,
+                                 line=dict(color=c, width=1.5)), row=row, col=1)
+        fig.update_yaxes(title_text="kW", row=row, col=1)
+
+    fig.update_layout(**{**BASE_LAYOUT, "legend": dict(orientation="h", y=-0.05)},
+        height=700,
+        title="<b>VMD 분해 결과 — grid_P (2022년 1~2월, 2주 발췌)</b><br>"
+              "<sub>K=4, α=2000 · 원신호를 4개 IMF로 분해 → 각 성분을 LSTM이 학습</sub>")
+    return fig
+
+
+# ════════════════════════════════════════════════════════════════════
+#  FIG 14 : 잔차 시계열 + 임계선 (이상탐지)
+# ════════════════════════════════════════════════════════════════════
+def fig_residual_timeseries() -> go.Figure:
+    if not ONLINE:
+        return PLACEHOLDER_FIG
+    import pickle
+    th_data = pickle.load(open("outputs/models/residual_threshold.pkl", "rb"))
+    threshold = th_data["threshold"]
+    res_mean  = th_data["res_mean"]
+
+    an = an_val.copy()
+    _tz = an.index.tz
+    def _ts(s): return pd.Timestamp(s).tz_localize(_tz) if _tz and pd.Timestamp(s).tzinfo is None else pd.Timestamp(s)
+
+    high = an[an["anomaly_level"] == "HIGH"]
+    low  = an[an["anomaly_level"] == "LOW"]
+
+    fig = go.Figure()
+    fig.add_vrect(x0=_ts("2022-05-06"), x1=_ts("2022-07-14"),
+                  fillcolor=C_FAIL, line_width=0,
+                  annotation_text="실제 장애 구간", annotation_position="top left",
+                  annotation_font_color="#EF4444")
+    fig.add_trace(go.Scatter(x=an.index, y=an["residual"]/1000, name="잔차",
+                             line=dict(color="#94A3B8", width=0.8), opacity=0.6))
+    fig.add_trace(go.Scatter(x=high.index, y=high["residual"]/1000, mode="markers",
+                             name="HIGH 이상", marker=dict(color=C_HIGH, size=4, symbol="x")))
+    fig.add_trace(go.Scatter(x=low.index, y=low["residual"]/1000, mode="markers",
+                             name="LOW 이상", marker=dict(color=C_LOW, size=3)))
+    fig.add_hline(y=threshold/1000, line_dash="dash", line_color=C_HIGH,
+                  annotation_text=f"잔차 임계값 ({threshold/1000:.1f} kW)",
+                  annotation_position="right", annotation_font_color=C_HIGH)
+    fig.add_hline(y=res_mean/1000, line_dash="dot", line_color="#64748B",
+                  annotation_text=f"잔차 평균 ({res_mean/1000:.1f} kW)",
+                  annotation_position="right")
+    fig.update_layout(**BASE_LAYOUT,
+        title="<b>예측 잔차 시계열 — 이상탐지 메커니즘 (2022 전체)</b><br>"
+              "<sub>장애 구간에서 잔차가 임계값을 초과 → HIGH 판정 · 잔차 = |실제값 - 예측값|</sub>",
+        yaxis_title="잔차 (kW)", xaxis_title="날짜")
+    return fig
+
+
+# ════════════════════════════════════════════════════════════════════
+#  FIG 15 : 오차 히트맵 — 시간대 × 요일
+# ════════════════════════════════════════════════════════════════════
+def fig_error_heatmap() -> go.Figure:
+    if not ONLINE:
+        return PLACEHOLDER_FIG
+    fc = fc_val.copy()
+    fc["hour"] = fc.index.hour
+    fc["dow"]  = fc.index.dayofweek
+    fc["abs_err_kw"] = np.abs(fc["actual"] - fc["predicted"]) / 1000
+
+    pivot = fc.pivot_table(values="abs_err_kw", index="hour", columns="dow", aggfunc="mean")
+    dow_labels = ["월", "화", "수", "목", "금", "토", "일"]
+
+    fig = go.Figure(go.Heatmap(
+        z=pivot.values,
+        x=[dow_labels[d] for d in pivot.columns],
+        y=[f"{h:02d}시" for h in pivot.index],
+        colorscale="YlOrRd",
+        colorbar=dict(title="MAE (kW)"),
+        hovertemplate="요일: %{x}<br>시간: %{y}<br>MAE: %{z:.1f} kW<extra></extra>",
+    ))
+    fig.update_layout(**{**BASE_LAYOUT, "hovermode": "closest"},
+        height=500,
+        title="<b>예측 오차 히트맵 — 시간대 × 요일 (Val 2022)</b><br>"
+              "<sub>색이 진할수록 예측 오차 큼 · 패턴으로 취약 시간대 파악</sub>",
+        xaxis_title="요일", yaxis_title="시간대",
+        yaxis=dict(autorange="reversed"))
+    return fig
+
+
+# ════════════════════════════════════════════════════════════════════
+#  FIG 16 : 우수 vs 저조(ZE) 계량기 시계열 비교
+# ════════════════════════════════════════════════════════════════════
+def fig_meter_compare() -> go.Figure:
+    if meter_ts is None:
+        return PLACEHOLDER_FIG
+
+    best = meter_ts["best"].resample("1D").mean().dropna()
+    ze   = meter_ts["ze"].resample("1D").mean().dropna()
+
+    fig = make_subplots(rows=2, cols=1, shared_xaxes=True,
+        subplot_titles=(
+            "우수 계량기 H2.Z63 (Val WAPE 0.5%) — 안정적 부하",
+            "저조 계량기 H2.ZE65 (Val WAPE≈100%) — 모델이 0으로 수렴",
+        ),
+        vertical_spacing=0.12)
+
+    fig.add_trace(go.Scatter(x=best.index, y=best["actual"]/1000, name="실제값",
+                             line=dict(color=C_ACTUAL, width=1.8)), row=1, col=1)
+    fig.add_trace(go.Scatter(x=best.index, y=best["predicted"]/1000, name="예측값",
+                             line=dict(color=C_PRED, width=1.8, dash="dot")), row=1, col=1)
+    fig.add_trace(go.Scatter(x=ze.index, y=ze["actual"]/1000, name="실제값 (ZE)",
+                             line=dict(color=C_ACTUAL, width=1.8), showlegend=False), row=2, col=1)
+    fig.add_trace(go.Scatter(x=ze.index, y=ze["predicted"]/1000, name="예측값 (ZE)",
+                             line=dict(color=C_PRED, width=1.8, dash="dot"), showlegend=False), row=2, col=1)
+
+    fig.update_yaxes(title_text="전력 (kW)", row=1, col=1)
+    fig.update_yaxes(title_text="전력 (kW)", row=2, col=1)
+    fig.update_layout(**BASE_LAYOUT, height=550,
+        title="<b>우수 vs 저조(ZE) 계량기 예측 비교 — 일별 평균 (Val 2022)</b><br>"
+              "<sub>H2.Z63: 일정한 부하 → 모델이 잘 추종 / H2.ZE65: 모델이 0 예측 → WAPE≈100%</sub>")
+    return fig
+
+
+# ════════════════════════════════════════════════════════════════════
 #  HTML 조립
 # ════════════════════════════════════════════════════════════════════
 
@@ -505,6 +822,13 @@ def build_html() -> str:
         "fig10": fig_seasonal_pattern(),
         "fig11": fig_val_vs_test(),
         "fig12": fig_energy_results(),
+    })
+    print("  FIG 13~16 (VMD/residual/heatmap/meter compare)...")
+    figures.update({
+        "fig13": fig_vmd_decomp(),
+        "fig14": fig_residual_timeseries(),
+        "fig15": fig_error_heatmap(),
+        "fig16": fig_meter_compare(),
     })
 
     divs = {k: v.to_html(full_html=False, include_plotlyjs=False)
@@ -538,7 +862,7 @@ def build_html() -> str:
       <td>{r.val_mae/1000:.1f} kW</td><td>{r.val_rmse/1000:.1f} kW</td>
       <td>{_tag(r.val_mape)}</td><td>{r.val_wape:.1f}%</td>
       <td>{r.val_f1:.3f}</td><td>{_tag(r.test_mape, 30, 100)}</td>
-    </tr>""" for r in er.itertuples())
+    </tr>""" for r in er_display.itertuples())
 
     offline_banner = "" if ONLINE else """
     <div style="background:#FEF3C7;border-left:4px solid #F59E0B;border-radius:8px;
@@ -661,12 +985,12 @@ def build_html() -> str:
       </tr>
       <tr style="background:#F5F3FF;">
         <td><b style="color:#8B5CF6;">검증 (Val)</b></td>
-        <td>2022-01-01 ~ 2022-12-31</td><td>8,760시간</td>
+        <td>2022-01-01 ~ 2022-12-31</td><td>{_val_rows:,}시간 <small style="color:#94A3B8;">(결측 {8760-_val_rows}h 제외)</small></td>
         <td>하이퍼파라미터 선택</td><td>장애 구간 포함 (pseudo-label)</td>
       </tr>
       <tr style="background:#ECFDF5;">
         <td><b style="color:#10B981;">테스트 (Test)</b></td>
-        <td>2023-01-01 ~ 2023-12-31</td><td>8,760시간</td>
+        <td>2023-01-01 ~ 2023-12-31</td><td>{_test_rows:,}시간 <small style="color:#94A3B8;">(결측 {8760-_test_rows}h 제외)</small></td>
         <td>최종 성능 평가</td><td>미래 시나리오 시뮬레이션</td>
       </tr>
     </table>
@@ -710,12 +1034,17 @@ def build_html() -> str:
         <tr><td>MLflow</td><td>공용 서버 (<code>121.134.46.24:5000</code>) · 파라미터/지표 형식 통일</td></tr>
       </table>
       <br>
-      <h3>🔍 이상탐지 앙상블 기준 (ensemble.py)</h3>
+      <h3>🔍 이상탐지 앙상블 기준 (Team 4 구현)</h3>
       <table>
-        <tr><th>임계치 방식</th><th colspan="2">MSD: mean(MSE) + 3 × std(MSE)</th></tr>
-        <tr><td><span class="tag bad">HIGH</span></td><td colspan="2">3개 모델 모두 탐지</td></tr>
-        <tr><td><span class="tag warn">MEDIUM</span></td><td colspan="2">2개 모델 탐지</td></tr>
-        <tr><td><span class="tag good">LOW</span></td><td colspan="2">1개 모델 탐지</td></tr>
+        <tr><th>신호</th><th>방식</th><th>임계치</th></tr>
+        <tr><td>잔차(Residual)</td><td>예측값과 실제값의 차이</td><td>mean + k × std (k 자동최적화)</td></tr>
+        <tr><td>Isolation Forest</td><td>원본 피처 11개 기반 이상 점수</td><td>contamination 자동 설정</td></tr>
+      </table>
+      <table style="margin-top:8px;">
+        <tr><th>판정</th><th>조건</th></tr>
+        <tr><td><span class="tag bad">HIGH</span></td><td>잔차 신호 + IF 신호 <b>둘 다</b> 탐지</td></tr>
+        <tr><td><span class="tag warn">LOW</span></td><td>잔차 또는 IF 신호 <b>하나만</b> 탐지</td></tr>
+        <tr><td><span class="tag good">NORMAL</span></td><td>두 신호 모두 정상</td></tr>
       </table>
     </div>
   </div>
@@ -728,12 +1057,27 @@ def build_html() -> str:
   </div>
 </section>
 
-<!-- ③ grid_P 예측 결과 -->
+<!-- ② VMD 방법론 시각화 -->
+<section>
+  <h2>② 모델 구조 — VMD 분해 시각화</h2>
+  {divs['fig13']}
+  <div class="info-box" style="margin-top:12px;">
+    <b>VMD(Variational Mode Decomposition)</b>란 원신호를 K개의 고유 모드(IMF)로 분해하는 신호처리 기법입니다.
+    각 IMF는 서로 다른 주파수 대역을 담당합니다 —
+    <b>IMF 1</b>(장주기 트렌드: 계절·월 단위),
+    <b>IMF 2</b>(주간 패턴: 7일 주기),
+    <b>IMF 3</b>(일간 패턴: 24시간 주기),
+    <b>IMF 4</b>(단기 변동 및 노이즈).
+    LSTM이 이 4개 성분을 동시에 학습하므로 단순 원신호 학습보다 패턴 포착 능력이 향상됩니다.
+  </div>
+</section>
+
+<!-- ③→④ grid_P 예측 결과 -->
 <section>
   <h2>③ grid_P (총 전력 소비) 예측 결과</h2>
   <div class="grid-4" style="margin-bottom:24px;">
-    <div class="kpi green"><div class="val">{_fc_val_mape:.1f}%</div><div class="lbl">Val MAPE (2022)</div></div>
-    <div class="kpi green"><div class="val">{_fc_val_wape:.1f}%</div><div class="lbl">Val WAPE (2022)</div></div>
+    <div class="kpi {"green" if _fc_val_mape < 20 else "yellow"}"><div class="val">{_fc_val_mape:.1f}%</div><div class="lbl">Val MAPE (2022)</div></div>
+    <div class="kpi {"green" if _fc_val_wape < 15 else "yellow"}"><div class="val">{_fc_val_wape:.1f}%</div><div class="lbl">Val WAPE (2022)</div></div>
     <div class="kpi red"><div class="val">{_fc_test_mape:.1f}%</div><div class="lbl">Test MAPE (2023)</div></div>
     <div class="kpi yellow"><div class="val">{_fc_test_wape:.1f}%</div><div class="lbl">Test WAPE (2023)</div></div>
   </div>
@@ -748,7 +1092,16 @@ def build_html() -> str:
   {divs['fig1']}
   <br>
   {divs['fig2']}
-  <div class="verdict warn">
+  <br>
+  {divs['fig15']}
+  <div class="info-box" style="margin-top:12px;">
+    <b>📌 MAPE vs WAPE 차이 해석:</b>
+    Val MAPE({_fc_val_mape:.1f}%)와 WAPE({_fc_val_wape:.1f}%) 간 큰 차이는 데이터 특성 때문입니다.
+    MAPE는 실제값이 0이거나 음수(회생전력 등)인 시간의 비율 오차가 무한대로 발산해 평균을 크게 올립니다.
+    WAPE는 합산 기반이라 이 영향을 받지 않아 실질 오차를 더 안정적으로 반영합니다.
+    <b>이 프로젝트의 주 지표는 WAPE입니다.</b>
+  </div>
+  <div class="verdict warn" style="margin-top:12px;">
     <b>⚠ Test 성능 저하 (Distribution Shift):</b>
     모델은 2018–2021 데이터로 학습되어 Val(2022)에서 WAPE {_fc_val_wape:.1f}%를 달성했으나,
     2023년 소비 패턴 변화로 Test WAPE {_fc_test_wape:.1f}%로 저하되었습니다.
@@ -761,33 +1114,40 @@ def build_html() -> str:
   <h2>④ 이상탐지 결과 (Residual + Isolation Forest)</h2>
   <div class="grid-4" style="margin-bottom:24px;">
     <div class="kpi yellow"><div class="val">{n_anom_str}</div><div class="lbl">이상 탐지 (2022)<br>{n_hl_str}</div></div>
-    <div class="kpi {"green" if _an_f1_high > 0.4 else "yellow"}"><div class="val">{f1_str}</div><div class="lbl">F1-Score (HIGH)</div></div>
-    <div class="kpi blue"><div class="val">{recall_str}</div><div class="lbl">Recall<br>(장애 탐지율)</div></div>
-    <div class="kpi yellow"><div class="val">{prec_str}</div><div class="lbl">Precision<br>(정밀도)</div></div>
+    <div class="kpi {"yellow" if _an_f1_high > 0.3 else "red"}"><div class="val">{f1_str}</div><div class="lbl">F1-Score (HIGH)<br><small style="font-size:.7rem;">HIGH+LOW: {_an_f1_any:.3f}</small></div></div>
+    <div class="kpi {"yellow" if _an_recall_high > 0.3 else "red"}"><div class="val">{recall_str}</div><div class="lbl">Recall (HIGH)<br>(장애 구간 탐지율)</div></div>
+    <div class="kpi {"green" if _an_prec_high > 0.5 else "yellow"}"><div class="val">{prec_str}</div><div class="lbl">Precision (HIGH)<br>(정밀도)</div></div>
   </div>
+  {divs['fig14']}
+  <br>
   {divs['fig3']}
   <br>
   <div class="grid-2">
     <div>{divs['fig4']}</div>
     <div>{divs['fig5']}</div>
   </div>
-  <div class="verdict warn">
-    <b>이상탐지 해석:</b>
-    장애 구간(2022-05-06~07-14)에서 예측 잔차가 급증하는 패턴이 명확합니다.
-    잔차 기반 임계치(MSD 방식)와 Isolation Forest를 앙상블하여 HIGH/LOW 두 단계로 감지합니다.
-    현재 Val F1={_an_f1_high:.3f}는 pseudo-label 1구간 기준이며,
-    실제 장애 기록이 누적될수록 임계값 자동 최적화 성능이 향상됩니다.
+  <div class="verdict bad">
+    <b>이상탐지 성능 현황 및 한계:</b><br>
+    HIGH 단독 기준 Recall={recall_str}로, 실제 장애 구간(1,657시간) 중
+    <b>{_an_recall_high*100:.1f}%만 HIGH로 탐지</b>합니다. 임계치(k)를 높게 설정하여 정밀도({prec_str})는
+    확보했으나 탐지율이 낮습니다.<br>
+    HIGH+LOW 합산 시 Recall={f"{_an_recall_any*100:.1f}%" if ONLINE else "—"}·F1={_an_f1_any:.3f}으로 다소 개선됩니다.<br><br>
+    <b>원인:</b> pseudo-label이 2022년 1구간(69일)뿐이라 임계값 최적화의 일반화가 어렵습니다.<br>
+    <b>개선 방향:</b> ① 다구간 장애 레이블 확보 → 임계값 재최적화,
+    ② k 값을 낮춰 Recall 우선 정책으로 전환,
+    ③ 장애 구간 외 정상 패턴 다양화.
   </div>
 </section>
 
 <!-- ⑤ 계량기 성능 -->
 <section>
   <h2>⑤ 개별 계량기 80개 성능</h2>
-  <div class="grid-4" style="margin-bottom:24px;">
-    <div class="kpi green"><div class="val">{_n_good}개</div><div class="lbl">우수 (Test MAPE &lt; 20%)</div></div>
+  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-bottom:24px;">
+    <div class="kpi green"><div class="val">{_n_good}개</div><div class="lbl">우수 (Test MAPE &lt; 20%)<br><small style="font-size:.7rem;">{_n_eval}개 평가 기준</small></div></div>
     <div class="kpi yellow"><div class="val">{_n_mid}개</div><div class="lbl">보통 (20~100%)</div></div>
     <div class="kpi red"><div class="val">{_n_bad}개</div><div class="lbl">저조 (&gt; 100%)</div></div>
-    <div class="kpi blue"><div class="val">{ok['val_wape'].median():.1f}%</div><div class="lbl">Val WAPE 중앙값</div></div>
+    <div class="kpi purple"><div class="val">{_n_no_eval}개</div><div class="lbl">평가불가<br><small style="font-size:.7rem;">test_mape 결측</small></div></div>
+    <div class="kpi blue"><div class="val">{ok['val_wape'].median():.1f}%</div><div class="lbl">Val WAPE 중앙값<br><small style="font-size:.7rem;">Test {_test_wape_med_clean:.1f}% (극단 {_n_outlier}개 제외)</small></div></div>
   </div>
   {divs['fig6']}
   <br>
@@ -795,6 +1155,8 @@ def build_html() -> str:
     <div>{divs['fig7']}</div>
     <div>{divs['fig8']}</div>
   </div>
+  <br>
+  {divs['fig16']}
   <hr>
   <div class="two-table">
     <div class="table-box">
@@ -813,9 +1175,12 @@ def build_html() -> str:
     </div>
   </div>
   <div class="verdict warn" style="margin-top:16px;">
-    <b>저조 계량기 분석:</b> WAPE=100% 계량기(ZE 그룹)는 간헐적 사용·대부분 0인 부하 특성으로
-    모델이 수렴하지 못한 케이스입니다. V.Z81처럼 WAPE 200%+ 계량기는 2022년 실제값이
-    학습 분포와 크게 달라진 것으로 분석됩니다. 계량기별 데이터 품질 검토 후 재학습 권장.
+    <b>저조 계량기 분석 및 이상값 처리:</b><br>
+    WAPE 100%+ 계량기(ZE 그룹)는 간헐적 사용·대부분 0인 부하 특성으로 모델 수렴 불가 케이스입니다.<br>
+    <b>극단 이상값 {_n_outlier}개</b>(test_wape &gt;{_wape_thresh}%): H1.K12 (~1,041,536%), H1.Z28 (~633%) —
+    2023년 실제 소비가 거의 0에 가까워 WAPE 분모가 0에 수렴하는 수치 불안정 케이스입니다.
+    이 {_n_outlier}개를 제외한 Test WAPE 중앙값은 <b>{_test_wape_med_clean:.1f}%</b>이며,
+    KPI/차트의 중앙값·분위수 통계는 이상값 제외 기준으로 표시됩니다.
   </div>
 </section>
 
@@ -824,9 +1189,9 @@ def build_html() -> str:
   <h2>⑥ 에너지 7종 예측 결과 (냉방 · 난방 · 태양광 · 열병합)</h2>
   <div class="grid-4" style="margin-bottom:24px;">
     <div class="kpi green"><div class="val">{(er['val_mape'] < 20).sum()}종</div><div class="lbl">우수 (Val MAPE &lt; 20%)</div></div>
-    <div class="kpi yellow"><div class="val">{er['val_wape'].mean():.1f}%</div><div class="lbl">Val WAPE 평균</div></div>
+    <div class="kpi yellow"><div class="val">{_er_val_wape_mean:.1f}%</div><div class="lbl">Val WAPE 평균</div></div>
     <div class="kpi green"><div class="val">{len(er)}종</div><div class="lbl">학습 완료</div></div>
-    <div class="kpi blue"><div class="val">{er['val_mae'].mean()/1000:.1f} kW</div><div class="lbl">Val MAE 평균</div></div>
+    <div class="kpi blue"><div class="val">{er_display['val_mae'].mean()/1000:.1f} kW</div><div class="lbl">Val MAE 평균</div></div>
   </div>
   {divs['fig12']}
   <br>
@@ -866,21 +1231,21 @@ def build_html() -> str:
     <tr><th>평가 항목</th><th>지표</th><th>현재 상태</th><th>판정</th><th>개선 방향</th></tr>
     <tr>
       <td>예측 정확도 (Val)</td><td>WAPE</td>
-      <td>grid_P {_fc_val_wape:.1f}% · 에너지7종 평균 {er['val_wape'].mean():.1f}% · 계량기 중앙값 {ok['val_wape'].median():.1f}%</td>
+      <td>grid_P {_fc_val_wape:.1f}% · 에너지7종 평균 {_er_val_wape_mean:.1f}% · 계량기 중앙값 {ok['val_wape'].median():.1f}%</td>
       <td><span class="tag good">양호</span></td>
       <td>하이퍼파라미터 추가 튜닝</td>
     </tr>
     <tr>
       <td>예측 정확도 (Test)</td><td>WAPE</td>
-      <td>grid_P {_fc_test_wape:.1f}% · 에너지7종 평균 {er['test_wape'].mean():.1f}% · 계량기 중앙값 {ok['test_wape'].median():.1f}%</td>
+      <td>grid_P {_gp_test_wape:.1f}% · 에너지7종 평균 {er_display['test_wape'].mean():.1f}% · 계량기 중앙값 {_test_wape_med_clean:.1f}% (극단값 {_n_outlier}개 제외)</td>
       <td><span class="tag warn">개선 필요</span></td>
       <td>연간 재학습 · 2022 데이터 학습 포함</td>
     </tr>
     <tr>
-      <td>이상탐지</td><td>F1</td>
-      <td>Val F1={_an_f1_high:.3f} · 잔차 급증 패턴 명확</td>
-      <td><span class="tag warn">조건부 양호</span></td>
-      <td>실제 장애 기록 추가 확보</td>
+      <td>이상탐지</td><td>F1 / Recall</td>
+      <td>HIGH F1={_an_f1_high:.3f} · Recall={recall_str} · HIGH+LOW F1={_an_f1_any:.3f} · 잔차 패턴 명확</td>
+      <td><span class="tag bad">개선 필요</span></td>
+      <td>다구간 레이블 확보 · k값 재최적화</td>
     </tr>
     <tr>
       <td>계량기 커버리지</td><td>완료율</td>
@@ -896,7 +1261,7 @@ def build_html() -> str:
     </tr>
     <tr>
       <td>확장성 (에너지 7종)</td><td>WAPE</td>
-      <td>VMD-LSTM × 7 학습 완료 · Val WAPE 평균 {er['val_wape'].mean():.1f}%</td>
+      <td>VMD-LSTM × 7 학습 완료 · Val WAPE 평균 {_er_val_wape_mean:.1f}%</td>
       <td><span class="tag good">완성</span></td>
       <td>연간 재학습 스케줄 도입</td>
     </tr>
@@ -911,8 +1276,10 @@ def build_html() -> str:
   <div class="verdict warn" style="margin-top:12px;">
     <b>⚠ 핵심 개선 과제 3가지:</b><br>
     (1) <b>연간 재학습</b> — 2022년 이후 데이터를 학습에 포함하면 Test 성능이 유의미하게 개선됩니다.<br>
-    (2) <b>저조 계량기 분석</b> — ZE 그룹·V.Z81 등 WAPE 100%+ 계량기는 데이터 품질 및 부하 특성 재검토 필요.<br>
-    (3) <b>이상탐지 레이블 확보</b> — 다구간 pseudo-label 추가 시 임계값 자동 최적화 크게 향상.
+    (2) <b>저조 계량기 원인별 대응</b> —
+      <b>ZE 그룹</b>(H2·H3·H4): 상시 0에 가까운 부하로 모델이 zero-prediction으로 수렴 → 사용 패턴이 있는 기간만 선택 학습 권장.
+      <b>V.Z81</b>: Val WAPE 223.7%, Test 평가불가(NaN) — 2023년 데이터 자체 이상 가능성, 원시 데이터 검토 필요.<br>
+    (3) <b>이상탐지 레이블 확보</b> — pseudo-label이 2022년 1구간(69일)뿐이라 임계값 최적화 일반화 한계. 다구간 레이블 추가 시 크게 향상.
   </div>
 </section>
 
