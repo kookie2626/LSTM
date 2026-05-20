@@ -1,0 +1,257 @@
+/usr/local/lib/python3.12/dist-packages/mlflow/tracking/_tracking_service/utils.py:184: FutureWarning: The filesystem tracking backend (e.g., './mlruns') is deprecated as of February 2026. Consider transitioning to a database backend (e.g., 'sqlite:///mlflow.db') to take advantage of the latest MLflow features. See https://mlflow.org/docs/latest/self-hosting/migrate-from-file-store for migration guidance.
+  return FileStore(store_uri, store_uri)
+2026/05/20 03:24:23 INFO mlflow.tracking.fluent: Experiment with name 'All-Meters' does not exist. Creating a new experiment.
+▶ 디바이스: cuda
+▶ 날씨 데이터 로드 중...
+/workspace/LSTM/scripts/train/train_all_meters.py:114: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+▶ 대상 계량기: 80개
+
+[ 1/80] H1.K11                 학습 중... /workspace/LSTM/scripts/train/train_all_meters.py:130: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+완료 (52s) | val MAE=1.3kW WAPE=18.5% F1=0.404
+[ 2/80] H1.K12                 학습 중... /workspace/LSTM/scripts/train/train_all_meters.py:130: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+완료 (62s) | val MAE=2.0kW WAPE=9.0% F1=0.401
+[ 3/80] H1.K14                 학습 중... /workspace/LSTM/scripts/train/train_all_meters.py:130: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+완료 (67s) | val MAE=5.6kW WAPE=33.7% F1=0.445
+[ 4/80] H1.K15                 학습 중... /workspace/LSTM/scripts/train/train_all_meters.py:130: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+완료 (57s) | val MAE=0.9kW WAPE=18.0% F1=0.367
+[ 5/80] H1.K16                 학습 중... /workspace/LSTM/scripts/train/train_all_meters.py:130: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+완료 (101s) | val MAE=0.3kW WAPE=5.8% F1=0.331
+[ 6/80] H1.W11                 학습 중... /workspace/LSTM/scripts/train/train_all_meters.py:130: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+완료 (105s) | val MAE=32.5kW WAPE=13.0% F1=0.303
+[ 7/80] H1.W12                 학습 중... /workspace/LSTM/scripts/train/train_all_meters.py:130: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+완료 (82s) | val MAE=13.0kW WAPE=14.4% F1=0.142
+[ 8/80] H1.Z10                 학습 중... /workspace/LSTM/scripts/train/train_all_meters.py:130: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+완료 (64s) | val MAE=0.4kW WAPE=9.3% F1=0.233
+[ 9/80] H1.Z11                 학습 중... /workspace/LSTM/scripts/train/train_all_meters.py:130: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+완료 (73s) | val MAE=1.3kW WAPE=28.6% F1=0.443
+[10/80] H1.Z12                 학습 중... /workspace/LSTM/scripts/train/train_all_meters.py:130: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+완료 (52s) | val MAE=1.2kW WAPE=26.7% F1=0.448
+[11/80] H1.Z13                 학습 중... /workspace/LSTM/scripts/train/train_all_meters.py:130: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+완료 (60s) | val MAE=0.7kW WAPE=6.1% F1=0.381
+[12/80] H1.Z14                 학습 중... /workspace/LSTM/scripts/train/train_all_meters.py:130: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+완료 (64s) | val MAE=0.7kW WAPE=6.2% F1=0.389
+[13/80] H1.Z15                 학습 중... /workspace/LSTM/scripts/train/train_all_meters.py:130: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+완료 (83s) | val MAE=24.5kW WAPE=84.1% F1=0.306
+[14/80] H1.Z16                 학습 중... /workspace/LSTM/scripts/train/train_all_meters.py:130: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+완료 (52s) | val MAE=0.7kW WAPE=58.3% F1=0.274
+[15/80] H1.Z17                 학습 중... /workspace/LSTM/scripts/train/train_all_meters.py:130: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+완료 (81s) | val MAE=3.8kW WAPE=6.2% F1=0.414
+[16/80] H1.Z18                 학습 중... /workspace/LSTM/scripts/train/train_all_meters.py:130: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+완료 (64s) | val MAE=0.4kW WAPE=21.1% F1=0.280
+[17/80] H1.Z19                 학습 중... /workspace/LSTM/scripts/train/train_all_meters.py:130: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+완료 (95s) | val MAE=0.1kW WAPE=5.2% F1=0.207
+[18/80] H1.Z20                 학습 중... /workspace/LSTM/scripts/train/train_all_meters.py:130: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+완료 (77s) | val MAE=55.1kW WAPE=nan% F1=0.176
+[19/80] H1.Z21                 학습 중... /workspace/LSTM/scripts/train/train_all_meters.py:130: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+완료 (73s) | val MAE=0.1kW WAPE=38.2% F1=0.204
+[20/80] H1.Z22                 학습 중... /workspace/LSTM/scripts/train/train_all_meters.py:130: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+완료 (51s) | val MAE=0.1kW WAPE=47.5% F1=0.226
+[21/80] H1.Z23                 학습 중... /workspace/LSTM/scripts/train/train_all_meters.py:130: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+완료 (44s) | val MAE=0.9kW WAPE=23.7% F1=0.183
+[22/80] H1.Z24                 학습 중... /workspace/LSTM/scripts/train/train_all_meters.py:130: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+완료 (77s) | val MAE=1.2kW WAPE=15.1% F1=0.358
+[23/80] H1.Z25                 학습 중... /workspace/LSTM/scripts/train/train_all_meters.py:130: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df = pd.read_sql(sql, conn)
+완료 (72s) | val MAE=1.1kW WAPE=15.0% F1=0.360
+[24/80] H1.Z26                 학습 중... ERROR: connection failed: connection to server at "121.134.46.24", port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+[25/80] H1.Z27                 학습 중... ERROR: connection failed: connection to server at "121.134.46.24", port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+[26/80] H1.Z28                 학습 중... ERROR: connection failed: connection to server at "121.134.46.24", port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+[27/80] H1.Z29                 학습 중... ERROR: connection failed: connection to server at "121.134.46.24", port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+[28/80] H1.Z310                학습 중... ERROR: connection failed: connection to server at "121.134.46.24", port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+[29/80] H1.ZE20                학습 중... ERROR: connection failed: connection to server at "121.134.46.24", port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+[30/80] H2.K21                 학습 중... ERROR: connection failed: connection to server at "121.134.46.24", port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+[31/80] H2.T.Z30               학습 중... ERROR: connection failed: connection to server at "121.134.46.24", port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+[32/80] H2.T.Z31               학습 중... ERROR: connection failed: connection to server at "121.134.46.24", port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+[33/80] H2.T.Z32               학습 중... ERROR: connection failed: connection to server at "121.134.46.24", port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+[34/80] H2.T.Z33               학습 중... ERROR: connection failed: connection to server at "121.134.46.24", port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+[35/80] H2.T.Z34               학습 중... ERROR: connection failed: connection to server at "121.134.46.24", port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+[36/80] H2.Z311                학습 중... ERROR: connection failed: connection to server at "121.134.46.24", port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+[37/80] H2.Z35                 학습 중... ERROR: connection failed: connection to server at "121.134.46.24", port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+[38/80] H2.Z351                학습 중... ERROR: connection failed: connection to server at "121.134.46.24", port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+[39/80] H2.Z36                 학습 중... ERROR: connection failed: connection to server at "121.134.46.24", port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+[40/80] H2.Z361                학습 중... ERROR: connection failed: connection to server at "121.134.46.24", port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+[41/80] H2.Z61                 학습 중... ERROR: connection failed: connection to server at "121.134.46.24", port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+[42/80] H2.Z62                 학습 중... ERROR: connection failed: connection to server at "121.134.46.24", port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+[43/80] H2.Z63                 학습 중... ERROR: connection failed: connection to server at "121.134.46.24", port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+[44/80] H2.Z64                 학습 중... ERROR: connection failed: connection to server at "121.134.46.24", port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+[45/80] H2.Z65                 학습 중... ERROR: connection failed: connection to server at "121.134.46.24", port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+[46/80] H2.Z66                 학습 중... ERROR: connection failed: connection to server at "121.134.46.24", port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+[47/80] H2.Z67                 학습 중... ERROR: connection failed: connection to server at "121.134.46.24", port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+[48/80] H2.Z68                 학습 중... ERROR: connection failed: connection to server at "121.134.46.24", port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+[49/80] H2.Z69                 학습 중... ERROR: connection failed: connection to server at "121.134.46.24", port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+[50/80] H2.Z70                 학습 중... ERROR: connection failed: connection to server at "121.134.46.24", port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+[51/80] H2.ZE64                학습 중... ERROR: connection failed: connection to server at "121.134.46.24", port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+[52/80] H2.ZE65                학습 중... ERROR: connection failed: connection to server at "121.134.46.24", port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+[53/80] H2.ZE66                학습 중... ERROR: connection failed: connection to server at "121.134.46.24", port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+[54/80] H2.ZE67                학습 중... ERROR: connection failed: connection to server at "121.134.46.24", port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+[55/80] H2.ZE74                학습 중... ERROR: connection failed: connection to server at "121.134.46.24", port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+[56/80] H3.Z312                학습 중... ERROR: connection failed: connection to server at "121.134.46.24", port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+[57/80] H3.Z40                 학습 중... ERROR: connection failed: connection to server at "121.134.46.24", port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+[58/80] H3.Z41                 학습 중... ERROR: connection failed: connection to server at "121.134.46.24", port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+[59/80] H3.Z42                 학습 중... ERROR: connection failed: connection to server at "121.134.46.24", port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+[60/80] H3.Z43                 학습 중... ERROR: connection failed: connection to server at "121.134.46.24", port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+[61/80] H3.Z44                 학습 중... ERROR: connection failed: connection to server at "121.134.46.24", port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+[62/80] H3.Z45                 학습 중... ERROR: connection failed: connection to server at "121.134.46.24", port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+[63/80] H3.Z46                 학습 중... ERROR: connection failed: connection to server at "121.134.46.24", port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+[64/80] H3.Z47                 학습 중... ERROR: connection failed: connection to server at "121.134.46.24", port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+[65/80] H3.Z48                 학습 중... ERROR: connection failed: connection to server at "121.134.46.24", port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+[66/80] H3.Z49                 학습 중... ERROR: connection failed: connection to server at "121.134.46.24", port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+[67/80] H3.Z71                 학습 중... ERROR: connection failed: connection to server at "121.134.46.24", port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+[68/80] H3.ZE40                학습 중... ERROR: connection failed: connection to server at "121.134.46.24", port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+[69/80] H3.ZE41                학습 중... ERROR: connection failed: connection to server at "121.134.46.24", port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+[70/80] H3.ZE43                학습 중... ERROR: connection failed: connection to server at "121.134.46.24", port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+[71/80] H3.ZE44                학습 중... ERROR: connection failed: connection to server at "121.134.46.24", port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+[72/80] H4.Z50                 학습 중... ERROR: connection failed: connection to server at "121.134.46.24", port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+[73/80] H4.Z51                 학습 중... ERROR: connection failed: connection to server at "121.134.46.24", port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+[74/80] H4.ZE50                학습 중... ERROR: connection failed: connection to server at "121.134.46.24", port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+[75/80] H4.ZE51                학습 중... ERROR: connection failed: connection to server at "121.134.46.24", port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+[76/80] V.K21                  학습 중... ERROR: connection failed: connection to server at "121.134.46.24", port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+[77/80] V.Z81                  학습 중... ERROR: connection failed: connection to server at "121.134.46.24", port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+[78/80] V.Z82                  학습 중... ERROR: connection failed: connection to server at "121.134.46.24", port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+[79/80] V.Z84                  학습 중... ERROR: connection failed: connection to server at "121.134.46.24", port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+[80/80] V.ZE84                 학습 중... ERROR: connection failed: connection to server at "121.134.46.24", port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+
+======================================================================
+완료: 23개  스킵: 0개  오류: 57개
+val MAE  평균: 6.4 kW
+val WAPE 평균: 22.9%
+val F1   평균: 0.316
+
+결과 저장: outputs/all_meters_results.csv

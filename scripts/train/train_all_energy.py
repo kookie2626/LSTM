@@ -386,13 +386,18 @@ def train_one_target(df_src: pd.DataFrame, target: str) -> dict:
     print("▶ 예측 평가 중...")
     _, _, train_res, _, _, _, _ = run_inference(
         model, train, feature_cols, target, scaler_X, scaler_y)
-    _, _, val_res, val_ts, val_mae, val_rmse, val_mape = run_inference(
+    val_true,  val_pred,  val_res,  val_ts,  val_mae,  val_rmse,  val_mape  = run_inference(
         model, val,   feature_cols, target, scaler_X, scaler_y)
-    _, _, test_res, test_ts, test_mae, test_rmse, test_mape = run_inference(
+    test_true, test_pred, test_res, test_ts, test_mae, test_rmse, test_mape = run_inference(
         model, test,  feature_cols, target, scaler_X, scaler_y)
 
-    print(f"\n  val  MAE={val_mae:,.1f}W  RMSE={val_rmse:,.1f}W  MAPE={val_mape:.2f}%")
-    print(f"  test MAE={test_mae:,.1f}W  RMSE={test_rmse:,.1f}W  MAPE={test_mape:.2f}%")
+    _vsum = float(np.sum(val_true))
+    val_wape  = float(np.sum(np.abs(val_true  - val_pred))  / _vsum * 100) if _vsum > 0 else float("nan")
+    _tsum = float(np.sum(test_true))
+    test_wape = float(np.sum(np.abs(test_true - test_pred)) / _tsum * 100) if _tsum > 0 else float("nan")
+
+    print(f"\n  val  MAE={val_mae:,.1f}W  RMSE={val_rmse:,.1f}W  MAPE={val_mape:.2f}%  WAPE={val_wape:.2f}%")
+    print(f"  test MAE={test_mae:,.1f}W  RMSE={test_rmse:,.1f}W  MAPE={test_mape:.2f}%  WAPE={test_wape:.2f}%")
 
     res_mean = train_res.mean()
     res_std  = train_res.std()
@@ -477,6 +482,7 @@ def train_one_target(df_src: pd.DataFrame, target: str) -> dict:
     with open(if_scaler_path, "wb") as f: pickle.dump(scaler_if, f)
 
     # ── MLflow 기록 ───────────────────────────────────────────────────────────
+    mlflow.end_run()  # stale active run 정리
     with mlflow.start_run(run_name=target):
         mlflow.log_params({
             "target":           target,
@@ -492,11 +498,13 @@ def train_one_target(df_src: pd.DataFrame, target: str) -> dict:
             "val_mae":   round(val_mae,   2),
             "val_rmse":  round(val_rmse,  2),
             "val_mape":  round(val_mape,  4) if not np.isnan(val_mape)  else -1,
+            "val_wape":  round(val_wape,  4) if not np.isnan(val_wape)  else -1,
             "val_f1":    round(val_f1,    4),
             "val_auc":   round(val_auc,   4) if not np.isnan(val_auc)   else -1,
             "test_mae":  round(test_mae,  2),
             "test_rmse": round(test_rmse, 2),
             "test_mape": round(test_mape, 4) if not np.isnan(test_mape) else -1,
+            "test_wape": round(test_wape, 4) if not np.isnan(test_wape) else -1,
             "test_f1":   round(test_f1,   4),
             "test_auc":  round(test_auc,  4) if not np.isnan(test_auc)  else -1,
         })
@@ -511,11 +519,13 @@ def train_one_target(df_src: pd.DataFrame, target: str) -> dict:
         "val_mae":     round(val_mae,   1),
         "val_rmse":    round(val_rmse,  1),
         "val_mape":    round(val_mape,  2) if not np.isnan(val_mape)  else float("nan"),
+        "val_wape":    round(val_wape,  2) if not np.isnan(val_wape)  else float("nan"),
         "val_f1":      round(val_f1,    4),
         "val_auc":     round(val_auc,   4) if not np.isnan(val_auc)   else float("nan"),
         "test_mae":    round(test_mae,  1),
         "test_rmse":   round(test_rmse, 1),
         "test_mape":   round(test_mape, 2) if not np.isnan(test_mape) else float("nan"),
+        "test_wape":   round(test_wape, 2) if not np.isnan(test_wape) else float("nan"),
         "test_f1":     round(test_f1,   4),
         "test_auc":    round(test_auc,  4) if not np.isnan(test_auc)  else float("nan"),
         "best_k":      best_k,

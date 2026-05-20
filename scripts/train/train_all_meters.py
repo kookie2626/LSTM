@@ -119,7 +119,7 @@ def load_weather() -> pd.DataFrame:
 
 
 def load_meter(meter_urn: str) -> pd.Series:
-    """개별 계량기 P 데이터 로드."""
+    """개별 계량기 P 데이터 로드 (단건 조회 — 배치 처리 시 load_all_meters 사용 권장)."""
     sql = f"""
         SELECT ts, value
         FROM ems.cr_measurement_1h
@@ -130,6 +130,26 @@ def load_meter(meter_urn: str) -> pd.Series:
         df = pd.read_sql(sql, conn)
     df.index = pd.to_datetime(df["ts"], utc=True)
     return df["value"].rename("target_P").sort_index()
+
+
+def load_all_meters(meter_list: list[str]) -> pd.DataFrame:
+    """80개 계량기 P 데이터를 쿼리 1번으로 일괄 로드.
+
+    Returns: wide DataFrame — index=ts(UTC), columns=meter_urn
+    """
+    placeholders = ",".join(f"'{m}'" for m in meter_list)
+    sql = f"""
+        SELECT ts, meter_urn, value
+        FROM ems.cr_measurement_1h
+        WHERE meter_urn IN ({placeholders}) AND measurement = 'P'
+        ORDER BY ts
+    """
+    with psycopg.connect(**CONNECT_KWARGS) as conn:
+        df = pd.read_sql(sql, conn)
+    df["ts"] = pd.to_datetime(df["ts"], utc=True)
+    wide = df.pivot_table(index="ts", columns="meter_urn", values="value", aggfunc="first")
+    wide.sort_index(inplace=True)
+    return wide
 
 
 def get_meter_list() -> list[str]:
@@ -202,12 +222,20 @@ def pseudo_labels(timestamps):
 
 # ── 학습 ──────────────────────────────────────────────────────────────────────
 
-def train_one_meter(meter_urn: str, weather: pd.DataFrame) -> dict:
-    """단일 계량기 학습. 결과 dict 반환."""
+def train_one_meter(meter_urn: str, weather: pd.DataFrame,
+                    all_meters: pd.DataFrame | None = None) -> dict:
+    """단일 계량기 학습. 결과 dict 반환.
+
+    all_meters: load_all_meters()로 미리 로드한 wide DataFrame.
+                None이면 개별 DB 쿼리로 폴백.
+    """
     result = {"meter_urn": meter_urn, "status": "OK"}
 
     # ── 데이터 준비 ──
-    meter_s = load_meter(meter_urn)
+    if all_meters is not None and meter_urn in all_meters.columns:
+        meter_s = all_meters[meter_urn].rename("target_P").dropna()
+    else:
+        meter_s = load_meter(meter_urn)
     df = weather.copy()
     df["target_P"] = meter_s.reindex(df.index).fillna(0)
 
@@ -293,19 +321,27 @@ def train_one_meter(meter_urn: str, weather: pd.DataFrame) -> dict:
     yhat_val = np.maximum(inv(predict(X_val), scaler_y), 0)
     ytru_val = inv(y_val[SEQ_LEN:], scaler_y)
     val_mae  = float(np.abs(ytru_val - yhat_val).mean())
+    val_rmse = float(np.sqrt(np.mean((ytru_val - yhat_val) ** 2)))
     val_sum  = float(np.sum(ytru_val))
     val_wape = float(np.sum(np.abs(ytru_val - yhat_val)) / val_sum * 100) if val_sum > 0 else float("nan")
+    _mask_val = ytru_val > 100
+    val_mape = float(np.mean(np.abs((ytru_val[_mask_val] - yhat_val[_mask_val]) / ytru_val[_mask_val])) * 100) if _mask_val.sum() > 0 else float("nan")
 
-    test_mae = test_wape = float("nan")
+    test_mae = test_rmse = test_wape = test_mape = float("nan")
     if len(X_test) > SEQ_LEN:
-        yhat_te  = np.maximum(inv(predict(X_test), scaler_y), 0)
-        ytru_te  = inv(y_test[SEQ_LEN:], scaler_y)
+        yhat_te   = np.maximum(inv(predict(X_test), scaler_y), 0)
+        ytru_te   = inv(y_test[SEQ_LEN:], scaler_y)
         test_mae  = float(np.abs(ytru_te - yhat_te).mean())
+        test_rmse = float(np.sqrt(np.mean((ytru_te - yhat_te) ** 2)))
         test_sum  = float(np.sum(ytru_te))
         test_wape = float(np.sum(np.abs(ytru_te - yhat_te)) / test_sum * 100) if test_sum > 0 else float("nan")
+        _mask_te  = ytru_te > 100
+        test_mape = float(np.mean(np.abs((ytru_te[_mask_te] - yhat_te[_mask_te]) / ytru_te[_mask_te])) * 100) if _mask_te.sum() > 0 else float("nan")
 
-    result.update({"val_mae": val_mae, "val_wape": val_wape,
-                   "test_mae": test_mae, "test_wape": test_wape})
+    result.update({"val_mae": val_mae, "val_rmse": val_rmse,
+                   "val_mape": val_mape, "val_wape": val_wape,
+                   "test_mae": test_mae, "test_rmse": test_rmse,
+                   "test_mape": test_mape, "test_wape": test_wape})
 
     # ── 잔차 기반 이상탐지 ──
     def residuals(X_seq, y_true_scaled):
@@ -390,7 +426,11 @@ def main():
     weather = load_weather()
 
     meters = [args.meter] if args.meter else get_meter_list()
-    print(f"▶ 대상 계량기: {len(meters)}개\n")
+    print(f"▶ 대상 계량기: {len(meters)}개")
+
+    print("▶ 계량기 데이터 일괄 로드 중 (DB 쿼리 1회)...")
+    all_meters_data = load_all_meters(meters)
+    print(f"  로드 완료: {all_meters_data.shape[1]}개 계량기\n")
 
     summary = []
     for i, meter_urn in enumerate(meters, 1):
@@ -403,8 +443,9 @@ def main():
         print(f"[{i:2d}/{len(meters)}] {meter_urn:<22} 학습 중...", end=" ", flush=True)
 
         try:
-            res = train_one_meter(meter_urn, weather)
+            res = train_one_meter(meter_urn, weather, all_meters_data)
 
+            mlflow.end_run()  # stale run 정리
             with mlflow.start_run(run_name=meter_urn):
                 mlflow.log_param("meter_urn", meter_urn)
                 if res["status"] == "OK":
@@ -434,10 +475,12 @@ def main():
 
     print(f"완료: {len(ok)}개  스킵: {len(skip)}개  오류: {len(err)}개")
     if ok:
-        maes  = [r["val_mae"] for r in ok if not np.isnan(r.get("val_mae", float("nan")))]
-        wapes = [r["val_wape"] for r in ok if not np.isnan(r.get("val_wape", float("nan")))]
-        f1s   = [r["val_f1"] for r in ok if not np.isnan(r.get("val_f1", float("nan")))]
+        def _avg(key): return [r[key] for r in ok if not np.isnan(r.get(key, float("nan")))]
+        maes  = _avg("val_mae");  rmses = _avg("val_rmse")
+        mapes = _avg("val_mape"); wapes = _avg("val_wape"); f1s = _avg("val_f1")
         print(f"val MAE  평균: {np.mean(maes)/1000:.1f} kW")
+        print(f"val RMSE 평균: {np.mean(rmses)/1000:.1f} kW")
+        print(f"val MAPE 평균: {np.mean(mapes):.1f}%")
         print(f"val WAPE 평균: {np.mean(wapes):.1f}%")
         print(f"val F1   평균: {np.mean(f1s):.3f}")
 

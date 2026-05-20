@@ -1,0 +1,39 @@
+/usr/local/lib/python3.12/dist-packages/mlflow/tracking/_tracking_service/utils.py:184: FutureWarning: The filesystem tracking backend (e.g., './mlruns') is deprecated as of February 2026. Consider transitioning to a database backend (e.g., 'sqlite:///mlflow.db') to take advantage of the latest MLflow features. See https://mlflow.org/docs/latest/self-hosting/migrate-from-file-store for migration guidance.
+  return FileStore(store_uri, store_uri)
+2026/05/20 02:43:44 INFO mlflow.tracking.fluent: Experiment with name 'SSA-IPSO-LSTM' does not exist. Creating a new experiment.
+▶ 디바이스: cuda
+▶ DB에서 데이터 로드 중...
+/workspace/project/ML/data_loader.py:59: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  return pd.read_sql(sql, conn)
+▶ VMD 분해 중 (K=4, alpha=2000)...
+  IMF 1: mean=169664.3  std=88941.1
+  IMF 2: mean=7.0  std=59058.7
+  IMF 3: mean=1.7  std=28186.8
+  IMF 4: mean=0.1  std=8500.5
+  lag 168h: mean=169574.2
+  lag 336h: mean=169287.8
+▶ 피처 수: 17  (기본 11 + IMF lag 4 + weekly lag 2)
+  학습  : 2018-01-01 ~ 2021-12-31 (33,238행)
+  검증  : 2022-01-01 ~ 2022-12-31 (8,737행)
+  테스트: 2023-01-01 ~ 2023-12-31 (8,737행)
+▶ VMD-LSTM 학습 중 (epochs=100, early_stop=15)...
+  Epoch   1 | train=0.014217 | val=0.004845 | no_improve=0
+  Epoch  10 | train=0.001259 | val=0.000930 | no_improve=1
+  Epoch  20 | train=0.000899 | val=0.000598 | no_improve=0
+  Epoch  30 | train=0.000734 | val=0.000597 | no_improve=6
+  Epoch  40 | train=0.000615 | val=0.000490 | no_improve=2
+  Epoch  50 | train=0.000529 | val=0.000455 | no_improve=1
+  Epoch  60 | train=0.000482 | val=0.000404 | no_improve=3
+  Epoch  70 | train=0.000414 | val=0.000359 | no_improve=1
+  Epoch  80 | train=0.000400 | val=0.000330 | no_improve=0
+  Epoch  90 | train=0.000335 | val=0.000286 | no_improve=0
+  Epoch 100 | train=0.000308 | val=0.000256 | no_improve=0
+
+▶ val 결과
+  MAE  : 24717.06 W  |  RMSE : 46108.71 W  |  MAPE : 32.28%
+
+▶ test 결과
+  MAE  : 30022.46 W  |  RMSE : 49166.95 W  |  MAPE : 66.94%
+
+▶ 모델 저장: outputs/models/vmd_lstm_grid_electricity.pt
+▶ 스케일러 저장: outputs/models/vmd_lstm_scaler.pkl

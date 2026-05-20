@@ -1,0 +1,21 @@
+/usr/local/lib/python3.12/dist-packages/mlflow/tracking/_tracking_service/utils.py:184: FutureWarning: The filesystem tracking backend (e.g., './mlruns') is deprecated as of February 2026. Consider transitioning to a database backend (e.g., 'sqlite:///mlflow.db') to take advantage of the latest MLflow features. See https://mlflow.org/docs/latest/self-hosting/migrate-from-file-store for migration guidance.
+  return FileStore(store_uri, store_uri)
+▶ 디바이스: cuda
+▶ 데이터 로드 중 (DB → wide DataFrame)...
+/workspace/LSTM/scripts/train/train_all_energy.py:179: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df_long = pd.read_sql(sql, conn)
+  기간: 2017-12-30 ~ 2023-12-31  (52,608행)
+  에너지 컬럼: ['grid_P', 'pv_gen', 'chp_gen', 'cool_P', 'cool_elec_P', 'heat_P', 'chp_heat_P']
+⏭  grid_P — 이미 학습됨, 건너뜀
+⏭  pv_gen — 이미 학습됨, 건너뜀
+⏭  chp_gen — 이미 학습됨, 건너뜀
+⏭  cool_P — 이미 학습됨, 건너뜀
+⏭  cool_elec_P — 이미 학습됨, 건너뜀
+⏭  heat_P — 이미 학습됨, 건너뜀
+⏭  chp_heat_P — 이미 학습됨, 건너뜀
+
+============================================================
+✓ 전체 완료
+
+▶ 결과 저장: outputs/all_energy_results.csv
+▶ 모델 경로: outputs/models/energy/{target}/

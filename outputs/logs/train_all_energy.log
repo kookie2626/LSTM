@@ -1,0 +1,612 @@
+/usr/local/lib/python3.12/dist-packages/mlflow/tracking/_tracking_service/utils.py:184: FutureWarning: The filesystem tracking backend (e.g., './mlruns') is deprecated as of February 2026. Consider transitioning to a database backend (e.g., 'sqlite:///mlflow.db') to take advantage of the latest MLflow features. See https://mlflow.org/docs/latest/self-hosting/migrate-from-file-store for migration guidance.
+  return FileStore(store_uri, store_uri)
+2026/05/20 02:48:34 INFO mlflow.tracking.fluent: Experiment with name 'All-Energy' does not exist. Creating a new experiment.
+▶ 디바이스: cuda
+▶ 데이터 로드 중 (DB → wide DataFrame)...
+/workspace/LSTM/scripts/train/train_all_energy.py:179: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  df_long = pd.read_sql(sql, conn)
+  기간: 2017-12-30 ~ 2023-12-31  (52,608행)
+  에너지 컬럼: ['grid_P', 'pv_gen', 'chp_gen', 'cool_P', 'cool_elec_P', 'heat_P', 'chp_heat_P']
+
+============================================================
+  타겟: grid_P
+============================================================
+▶ VMD 분해 중 (K=4, alpha=2000)...
+/workspace/LSTM/scripts/train/train_all_energy.py:290: FutureWarning: ChainedAssignmentError: behaviour will change in pandas 3.0!
+You are setting values through chained assignment. Currently this works in certain cases, but when using Copy-on-Write (which will become the default behaviour in pandas 3.0) this will never work to update the original DataFrame or Series, because the intermediate object on which we are setting values will behave as a copy.
+A typical example is when you are setting values in a column of a DataFrame, like:
+
+df["col"][row_indexer] = value
+
+Use `df.loc[row_indexer, "col"] = values` instead, to perform the assignment in a single step and ensure this keeps updating the original `df`.
+
+See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
+
+  df[col].iloc[0] = 0
+/workspace/LSTM/scripts/train/train_all_energy.py:290: FutureWarning: ChainedAssignmentError: behaviour will change in pandas 3.0!
+You are setting values through chained assignment. Currently this works in certain cases, but when using Copy-on-Write (which will become the default behaviour in pandas 3.0) this will never work to update the original DataFrame or Series, because the intermediate object on which we are setting values will behave as a copy.
+A typical example is when you are setting values in a column of a DataFrame, like:
+
+df["col"][row_indexer] = value
+
+Use `df.loc[row_indexer, "col"] = values` instead, to perform the assignment in a single step and ensure this keeps updating the original `df`.
+
+See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
+
+  df[col].iloc[0] = 0
+/workspace/LSTM/scripts/train/train_all_energy.py:290: FutureWarning: ChainedAssignmentError: behaviour will change in pandas 3.0!
+You are setting values through chained assignment. Currently this works in certain cases, but when using Copy-on-Write (which will become the default behaviour in pandas 3.0) this will never work to update the original DataFrame or Series, because the intermediate object on which we are setting values will behave as a copy.
+A typical example is when you are setting values in a column of a DataFrame, like:
+
+df["col"][row_indexer] = value
+
+Use `df.loc[row_indexer, "col"] = values` instead, to perform the assignment in a single step and ensure this keeps updating the original `df`.
+
+See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
+
+  df[col].iloc[0] = 0
+/workspace/LSTM/scripts/train/train_all_energy.py:290: FutureWarning: ChainedAssignmentError: behaviour will change in pandas 3.0!
+You are setting values through chained assignment. Currently this works in certain cases, but when using Copy-on-Write (which will become the default behaviour in pandas 3.0) this will never work to update the original DataFrame or Series, because the intermediate object on which we are setting values will behave as a copy.
+A typical example is when you are setting values in a column of a DataFrame, like:
+
+df["col"][row_indexer] = value
+
+Use `df.loc[row_indexer, "col"] = values` instead, to perform the assignment in a single step and ensure this keeps updating the original `df`.
+
+See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
+
+  df[col].iloc[0] = 0
+▶ 피처 수: 21  (에너지 6 + 기상 2 + 시간 6 + VMD 4 + lag 3)
+  학습 : 2018-01-01 ~ 2021-12-31 (33,238행)
+  검증 : 2022-01-01   ~ 2022-12-31   (8,737행)
+  테스트: 2023-01-01 ~ 2023-12-31  (8,737행)
+▶ LSTM 학습 중 (epochs=100, early_stop=15, device=cuda)...
+  Epoch   1 | train=0.012547 | val=0.003847 | no_improve=0
+  Epoch  10 | train=0.001519 | val=0.001042 | no_improve=0
+  Epoch  20 | train=0.000937 | val=0.000583 | no_improve=0
+  Epoch  30 | train=0.000647 | val=0.000499 | no_improve=0
+  Epoch  40 | train=0.000522 | val=0.000508 | no_improve=2
+  Epoch  50 | train=0.000444 | val=0.000440 | no_improve=2
+  Epoch  60 | train=0.000369 | val=0.000346 | no_improve=0
+  Epoch  70 | train=0.000299 | val=0.000289 | no_improve=0
+  Epoch  80 | train=0.000261 | val=0.000265 | no_improve=5
+  Epoch  90 | train=0.000230 | val=0.000241 | no_improve=2
+  Epoch 100 | train=0.000216 | val=0.000227 | no_improve=4
+▶ 예측 평가 중...
+
+  val  MAE=23,773.6W  RMSE=45,313.5W  MAPE=23.25%
+  test MAE=30,295.2W  RMSE=49,912.7W  MAPE=41.26%
+  train 잔차 mean=18,218.6W  std=27,861.9W
+▶ Isolation Forest 학습 중...
+▶ 임계치 최적화 중 (val F1 기준)...
+  최적 k=3.8  val F1=0.344  threshold=124,093.8W
+  val  F1=0.344  Prec=0.304  Rec=0.396  AUC=0.544
+  test F1=0.000  Prec=0.000  Rec=0.000  AUC=nan
+▶ 저장 완료: outputs/models/energy/grid_P/
+
+============================================================
+  타겟: pv_gen
+============================================================
+▶ VMD 분해 중 (K=4, alpha=2000)...
+/workspace/LSTM/scripts/train/train_all_energy.py:290: FutureWarning: ChainedAssignmentError: behaviour will change in pandas 3.0!
+You are setting values through chained assignment. Currently this works in certain cases, but when using Copy-on-Write (which will become the default behaviour in pandas 3.0) this will never work to update the original DataFrame or Series, because the intermediate object on which we are setting values will behave as a copy.
+A typical example is when you are setting values in a column of a DataFrame, like:
+
+df["col"][row_indexer] = value
+
+Use `df.loc[row_indexer, "col"] = values` instead, to perform the assignment in a single step and ensure this keeps updating the original `df`.
+
+See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
+
+  df[col].iloc[0] = 0
+/workspace/LSTM/scripts/train/train_all_energy.py:290: FutureWarning: ChainedAssignmentError: behaviour will change in pandas 3.0!
+You are setting values through chained assignment. Currently this works in certain cases, but when using Copy-on-Write (which will become the default behaviour in pandas 3.0) this will never work to update the original DataFrame or Series, because the intermediate object on which we are setting values will behave as a copy.
+A typical example is when you are setting values in a column of a DataFrame, like:
+
+df["col"][row_indexer] = value
+
+Use `df.loc[row_indexer, "col"] = values` instead, to perform the assignment in a single step and ensure this keeps updating the original `df`.
+
+See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
+
+  df[col].iloc[0] = 0
+/workspace/LSTM/scripts/train/train_all_energy.py:290: FutureWarning: ChainedAssignmentError: behaviour will change in pandas 3.0!
+You are setting values through chained assignment. Currently this works in certain cases, but when using Copy-on-Write (which will become the default behaviour in pandas 3.0) this will never work to update the original DataFrame or Series, because the intermediate object on which we are setting values will behave as a copy.
+A typical example is when you are setting values in a column of a DataFrame, like:
+
+df["col"][row_indexer] = value
+
+Use `df.loc[row_indexer, "col"] = values` instead, to perform the assignment in a single step and ensure this keeps updating the original `df`.
+
+See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
+
+  df[col].iloc[0] = 0
+/workspace/LSTM/scripts/train/train_all_energy.py:290: FutureWarning: ChainedAssignmentError: behaviour will change in pandas 3.0!
+You are setting values through chained assignment. Currently this works in certain cases, but when using Copy-on-Write (which will become the default behaviour in pandas 3.0) this will never work to update the original DataFrame or Series, because the intermediate object on which we are setting values will behave as a copy.
+A typical example is when you are setting values in a column of a DataFrame, like:
+
+df["col"][row_indexer] = value
+
+Use `df.loc[row_indexer, "col"] = values` instead, to perform the assignment in a single step and ensure this keeps updating the original `df`.
+
+See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
+
+  df[col].iloc[0] = 0
+▶ 피처 수: 21  (에너지 6 + 기상 2 + 시간 6 + VMD 4 + lag 3)
+  학습 : 2018-01-01 ~ 2021-12-31 (33,238행)
+  검증 : 2022-01-01   ~ 2022-12-31   (8,737행)
+  테스트: 2023-01-01 ~ 2023-12-31  (8,737행)
+▶ LSTM 학습 중 (epochs=100, early_stop=15, device=cuda)...
+  Epoch   1 | train=0.004421 | val=0.004052 | no_improve=0
+  Epoch  10 | train=0.000645 | val=0.001381 | no_improve=0
+  Epoch  20 | train=0.000456 | val=0.000961 | no_improve=1
+  Epoch  30 | train=0.000374 | val=0.000805 | no_improve=1
+  Epoch  40 | train=0.000321 | val=0.000743 | no_improve=1
+  Epoch  50 | train=0.000264 | val=0.000613 | no_improve=2
+  Epoch  60 | train=0.000234 | val=0.000623 | no_improve=4
+  Epoch  70 | train=0.000213 | val=0.000611 | no_improve=14
+  Early stopping at epoch 71
+▶ 예측 평가 중...
+
+  val  MAE=9,046.7W  RMSE=19,585.8W  MAPE=67.52%
+  test MAE=8,057.3W  RMSE=16,526.0W  MAPE=48.42%
+  train 잔차 mean=3,715.0W  std=9,943.3W
+▶ Isolation Forest 학습 중...
+▶ 임계치 최적화 중 (val F1 기준)...
+  최적 k=0.8  val F1=0.356  threshold=11,669.6W
+  val  F1=0.356  Prec=0.279  Rec=0.489  AUC=0.640
+  test F1=0.000  Prec=0.000  Rec=0.000  AUC=nan
+
+✗ pv_gen 학습 실패: Run with UUID 84f95070da344f2a82d2a5e73d7542bd is already active. To start a new run, first end the current run with mlflow.end_run(). To start a nested run, call start_run with nested=True
+Traceback (most recent call last):
+  File "/workspace/LSTM/scripts/train/train_all_energy.py", line 559, in main
+    result = train_one_target(df, target)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/LSTM/scripts/train/train_all_energy.py", line 480, in train_one_target
+    with mlflow.start_run(run_name=target):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/mlflow/tracking/fluent.py", line 543, in start_run
+    raise Exception(
+Exception: Run with UUID 84f95070da344f2a82d2a5e73d7542bd is already active. To start a new run, first end the current run with mlflow.end_run(). To start a nested run, call start_run with nested=True
+
+============================================================
+  타겟: chp_gen
+============================================================
+▶ VMD 분해 중 (K=4, alpha=2000)...
+/workspace/LSTM/scripts/train/train_all_energy.py:290: FutureWarning: ChainedAssignmentError: behaviour will change in pandas 3.0!
+You are setting values through chained assignment. Currently this works in certain cases, but when using Copy-on-Write (which will become the default behaviour in pandas 3.0) this will never work to update the original DataFrame or Series, because the intermediate object on which we are setting values will behave as a copy.
+A typical example is when you are setting values in a column of a DataFrame, like:
+
+df["col"][row_indexer] = value
+
+Use `df.loc[row_indexer, "col"] = values` instead, to perform the assignment in a single step and ensure this keeps updating the original `df`.
+
+See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
+
+  df[col].iloc[0] = 0
+/workspace/LSTM/scripts/train/train_all_energy.py:290: FutureWarning: ChainedAssignmentError: behaviour will change in pandas 3.0!
+You are setting values through chained assignment. Currently this works in certain cases, but when using Copy-on-Write (which will become the default behaviour in pandas 3.0) this will never work to update the original DataFrame or Series, because the intermediate object on which we are setting values will behave as a copy.
+A typical example is when you are setting values in a column of a DataFrame, like:
+
+df["col"][row_indexer] = value
+
+Use `df.loc[row_indexer, "col"] = values` instead, to perform the assignment in a single step and ensure this keeps updating the original `df`.
+
+See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
+
+  df[col].iloc[0] = 0
+/workspace/LSTM/scripts/train/train_all_energy.py:290: FutureWarning: ChainedAssignmentError: behaviour will change in pandas 3.0!
+You are setting values through chained assignment. Currently this works in certain cases, but when using Copy-on-Write (which will become the default behaviour in pandas 3.0) this will never work to update the original DataFrame or Series, because the intermediate object on which we are setting values will behave as a copy.
+A typical example is when you are setting values in a column of a DataFrame, like:
+
+df["col"][row_indexer] = value
+
+Use `df.loc[row_indexer, "col"] = values` instead, to perform the assignment in a single step and ensure this keeps updating the original `df`.
+
+See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
+
+  df[col].iloc[0] = 0
+/workspace/LSTM/scripts/train/train_all_energy.py:290: FutureWarning: ChainedAssignmentError: behaviour will change in pandas 3.0!
+You are setting values through chained assignment. Currently this works in certain cases, but when using Copy-on-Write (which will become the default behaviour in pandas 3.0) this will never work to update the original DataFrame or Series, because the intermediate object on which we are setting values will behave as a copy.
+A typical example is when you are setting values in a column of a DataFrame, like:
+
+df["col"][row_indexer] = value
+
+Use `df.loc[row_indexer, "col"] = values` instead, to perform the assignment in a single step and ensure this keeps updating the original `df`.
+
+See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
+
+  df[col].iloc[0] = 0
+▶ 피처 수: 21  (에너지 6 + 기상 2 + 시간 6 + VMD 4 + lag 3)
+  학습 : 2018-01-01 ~ 2021-12-31 (33,238행)
+  검증 : 2022-01-01   ~ 2022-12-31   (8,737행)
+  테스트: 2023-01-01 ~ 2023-12-31  (8,737행)
+▶ LSTM 학습 중 (epochs=100, early_stop=15, device=cuda)...
+  Epoch   1 | train=0.024543 | val=0.009722 | no_improve=0
+  Epoch  10 | train=0.006133 | val=0.002825 | no_improve=1
+  Epoch  20 | train=0.004334 | val=0.001995 | no_improve=0
+  Epoch  30 | train=0.002751 | val=0.001236 | no_improve=0
+  Epoch  40 | train=0.002220 | val=0.000933 | no_improve=0
+  Epoch  50 | train=0.001869 | val=0.000859 | no_improve=6
+  Epoch  60 | train=0.001516 | val=0.000769 | no_improve=1
+  Epoch  70 | train=0.001438 | val=0.000765 | no_improve=4
+  Epoch  80 | train=0.001291 | val=0.000744 | no_improve=7
+  Early stopping at epoch 88
+▶ 예측 평가 중...
+
+  val  MAE=3,837.2W  RMSE=8,108.4W  MAPE=62.31%
+  test MAE=9,677.1W  RMSE=18,944.5W  MAPE=267.12%
+  train 잔차 mean=5,152.0W  std=8,010.2W
+▶ Isolation Forest 학습 중...
+▶ 임계치 최적화 중 (val F1 기준)...
+  최적 k=4.0  val F1=0.359  threshold=37,192.8W
+  val  F1=0.359  Prec=0.313  Rec=0.420  AUC=0.224
+  test F1=0.000  Prec=0.000  Rec=0.000  AUC=nan
+
+✗ chp_gen 학습 실패: Run with UUID 84f95070da344f2a82d2a5e73d7542bd is already active. To start a new run, first end the current run with mlflow.end_run(). To start a nested run, call start_run with nested=True
+Traceback (most recent call last):
+  File "/workspace/LSTM/scripts/train/train_all_energy.py", line 559, in main
+    result = train_one_target(df, target)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/LSTM/scripts/train/train_all_energy.py", line 480, in train_one_target
+    with mlflow.start_run(run_name=target):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/mlflow/tracking/fluent.py", line 543, in start_run
+    raise Exception(
+Exception: Run with UUID 84f95070da344f2a82d2a5e73d7542bd is already active. To start a new run, first end the current run with mlflow.end_run(). To start a nested run, call start_run with nested=True
+
+============================================================
+  타겟: cool_P
+============================================================
+▶ VMD 분해 중 (K=4, alpha=2000)...
+/workspace/LSTM/scripts/train/train_all_energy.py:290: FutureWarning: ChainedAssignmentError: behaviour will change in pandas 3.0!
+You are setting values through chained assignment. Currently this works in certain cases, but when using Copy-on-Write (which will become the default behaviour in pandas 3.0) this will never work to update the original DataFrame or Series, because the intermediate object on which we are setting values will behave as a copy.
+A typical example is when you are setting values in a column of a DataFrame, like:
+
+df["col"][row_indexer] = value
+
+Use `df.loc[row_indexer, "col"] = values` instead, to perform the assignment in a single step and ensure this keeps updating the original `df`.
+
+See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
+
+  df[col].iloc[0] = 0
+/workspace/LSTM/scripts/train/train_all_energy.py:290: FutureWarning: ChainedAssignmentError: behaviour will change in pandas 3.0!
+You are setting values through chained assignment. Currently this works in certain cases, but when using Copy-on-Write (which will become the default behaviour in pandas 3.0) this will never work to update the original DataFrame or Series, because the intermediate object on which we are setting values will behave as a copy.
+A typical example is when you are setting values in a column of a DataFrame, like:
+
+df["col"][row_indexer] = value
+
+Use `df.loc[row_indexer, "col"] = values` instead, to perform the assignment in a single step and ensure this keeps updating the original `df`.
+
+See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
+
+  df[col].iloc[0] = 0
+/workspace/LSTM/scripts/train/train_all_energy.py:290: FutureWarning: ChainedAssignmentError: behaviour will change in pandas 3.0!
+You are setting values through chained assignment. Currently this works in certain cases, but when using Copy-on-Write (which will become the default behaviour in pandas 3.0) this will never work to update the original DataFrame or Series, because the intermediate object on which we are setting values will behave as a copy.
+A typical example is when you are setting values in a column of a DataFrame, like:
+
+df["col"][row_indexer] = value
+
+Use `df.loc[row_indexer, "col"] = values` instead, to perform the assignment in a single step and ensure this keeps updating the original `df`.
+
+See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
+
+  df[col].iloc[0] = 0
+/workspace/LSTM/scripts/train/train_all_energy.py:290: FutureWarning: ChainedAssignmentError: behaviour will change in pandas 3.0!
+You are setting values through chained assignment. Currently this works in certain cases, but when using Copy-on-Write (which will become the default behaviour in pandas 3.0) this will never work to update the original DataFrame or Series, because the intermediate object on which we are setting values will behave as a copy.
+A typical example is when you are setting values in a column of a DataFrame, like:
+
+df["col"][row_indexer] = value
+
+Use `df.loc[row_indexer, "col"] = values` instead, to perform the assignment in a single step and ensure this keeps updating the original `df`.
+
+See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
+
+  df[col].iloc[0] = 0
+▶ 피처 수: 21  (에너지 6 + 기상 2 + 시간 6 + VMD 4 + lag 3)
+  학습 : 2018-01-01 ~ 2021-12-31 (33,238행)
+  검증 : 2022-01-01   ~ 2022-12-31   (8,737행)
+  테스트: 2023-01-01 ~ 2023-12-31  (8,737행)
+▶ LSTM 학습 중 (epochs=100, early_stop=15, device=cuda)...
+  Epoch   1 | train=0.004510 | val=0.002569 | no_improve=0
+  Epoch  10 | train=0.000948 | val=0.001274 | no_improve=3
+  Epoch  20 | train=0.000535 | val=0.000783 | no_improve=0
+  Epoch  30 | train=0.000374 | val=0.000490 | no_improve=1
+  Epoch  40 | train=0.000238 | val=0.000274 | no_improve=0
+  Epoch  50 | train=0.000209 | val=0.000224 | no_improve=1
+  Epoch  60 | train=0.000189 | val=0.000175 | no_improve=0
+  Epoch  70 | train=0.000160 | val=0.000161 | no_improve=6
+  Epoch  80 | train=0.000132 | val=0.000128 | no_improve=0
+  Epoch  90 | train=0.000120 | val=0.000123 | no_improve=3
+  Epoch 100 | train=0.000110 | val=0.000120 | no_improve=2
+▶ 예측 평가 중...
+
+  val  MAE=3,277.3W  RMSE=5,519.3W  MAPE=16.17%
+  test MAE=3,752.6W  RMSE=21,287.8W  MAPE=18.02%
+  train 잔차 mean=2,870.1W  std=3,222.9W
+▶ Isolation Forest 학습 중...
+▶ 임계치 최적화 중 (val F1 기준)...
+  최적 k=0.5  val F1=0.398  threshold=4,481.6W
+  val  F1=0.398  Prec=0.295  Rec=0.612  AUC=0.696
+  test F1=0.000  Prec=0.000  Rec=0.000  AUC=nan
+
+✗ cool_P 학습 실패: Run with UUID 84f95070da344f2a82d2a5e73d7542bd is already active. To start a new run, first end the current run with mlflow.end_run(). To start a nested run, call start_run with nested=True
+Traceback (most recent call last):
+  File "/workspace/LSTM/scripts/train/train_all_energy.py", line 559, in main
+    result = train_one_target(df, target)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/LSTM/scripts/train/train_all_energy.py", line 480, in train_one_target
+    with mlflow.start_run(run_name=target):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/mlflow/tracking/fluent.py", line 543, in start_run
+    raise Exception(
+Exception: Run with UUID 84f95070da344f2a82d2a5e73d7542bd is already active. To start a new run, first end the current run with mlflow.end_run(). To start a nested run, call start_run with nested=True
+
+============================================================
+  타겟: cool_elec_P
+============================================================
+▶ VMD 분해 중 (K=4, alpha=2000)...
+/workspace/LSTM/scripts/train/train_all_energy.py:290: FutureWarning: ChainedAssignmentError: behaviour will change in pandas 3.0!
+You are setting values through chained assignment. Currently this works in certain cases, but when using Copy-on-Write (which will become the default behaviour in pandas 3.0) this will never work to update the original DataFrame or Series, because the intermediate object on which we are setting values will behave as a copy.
+A typical example is when you are setting values in a column of a DataFrame, like:
+
+df["col"][row_indexer] = value
+
+Use `df.loc[row_indexer, "col"] = values` instead, to perform the assignment in a single step and ensure this keeps updating the original `df`.
+
+See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
+
+  df[col].iloc[0] = 0
+/workspace/LSTM/scripts/train/train_all_energy.py:290: FutureWarning: ChainedAssignmentError: behaviour will change in pandas 3.0!
+You are setting values through chained assignment. Currently this works in certain cases, but when using Copy-on-Write (which will become the default behaviour in pandas 3.0) this will never work to update the original DataFrame or Series, because the intermediate object on which we are setting values will behave as a copy.
+A typical example is when you are setting values in a column of a DataFrame, like:
+
+df["col"][row_indexer] = value
+
+Use `df.loc[row_indexer, "col"] = values` instead, to perform the assignment in a single step and ensure this keeps updating the original `df`.
+
+See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
+
+  df[col].iloc[0] = 0
+/workspace/LSTM/scripts/train/train_all_energy.py:290: FutureWarning: ChainedAssignmentError: behaviour will change in pandas 3.0!
+You are setting values through chained assignment. Currently this works in certain cases, but when using Copy-on-Write (which will become the default behaviour in pandas 3.0) this will never work to update the original DataFrame or Series, because the intermediate object on which we are setting values will behave as a copy.
+A typical example is when you are setting values in a column of a DataFrame, like:
+
+df["col"][row_indexer] = value
+
+Use `df.loc[row_indexer, "col"] = values` instead, to perform the assignment in a single step and ensure this keeps updating the original `df`.
+
+See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
+
+  df[col].iloc[0] = 0
+/workspace/LSTM/scripts/train/train_all_energy.py:290: FutureWarning: ChainedAssignmentError: behaviour will change in pandas 3.0!
+You are setting values through chained assignment. Currently this works in certain cases, but when using Copy-on-Write (which will become the default behaviour in pandas 3.0) this will never work to update the original DataFrame or Series, because the intermediate object on which we are setting values will behave as a copy.
+A typical example is when you are setting values in a column of a DataFrame, like:
+
+df["col"][row_indexer] = value
+
+Use `df.loc[row_indexer, "col"] = values` instead, to perform the assignment in a single step and ensure this keeps updating the original `df`.
+
+See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
+
+  df[col].iloc[0] = 0
+▶ 피처 수: 21  (에너지 6 + 기상 2 + 시간 6 + VMD 4 + lag 3)
+  학습 : 2018-01-01 ~ 2021-12-31 (33,238행)
+  검증 : 2022-01-01   ~ 2022-12-31   (8,737행)
+  테스트: 2023-01-01 ~ 2023-12-31  (8,737행)
+▶ LSTM 학습 중 (epochs=100, early_stop=15, device=cuda)...
+  Epoch   1 | train=0.003223 | val=0.002230 | no_improve=0
+  Epoch  10 | train=0.000759 | val=0.001121 | no_improve=1
+  Epoch  20 | train=0.000627 | val=0.001012 | no_improve=4
+  Epoch  30 | train=0.000297 | val=0.000309 | no_improve=0
+  Epoch  40 | train=0.000186 | val=0.000184 | no_improve=2
+  Epoch  50 | train=0.000158 | val=0.000147 | no_improve=0
+  Epoch  60 | train=0.000139 | val=0.000145 | no_improve=0
+  Epoch  70 | train=0.000134 | val=0.000153 | no_improve=4
+  Epoch  80 | train=0.000126 | val=0.000138 | no_improve=9
+  Epoch  90 | train=0.000120 | val=0.000145 | no_improve=4
+  Epoch 100 | train=0.000119 | val=0.000136 | no_improve=14
+▶ 예측 평가 중...
+
+  val  MAE=1,675.8W  RMSE=2,683.1W  MAPE=12.23%
+  test MAE=1,435.9W  RMSE=2,649.1W  MAPE=17.68%
+  train 잔차 mean=1,389.5W  std=1,528.2W
+▶ Isolation Forest 학습 중...
+▶ 임계치 최적화 중 (val F1 기준)...
+  최적 k=0.5  val F1=0.393  threshold=2,153.6W
+  val  F1=0.393  Prec=0.291  Rec=0.602  AUC=0.676
+  test F1=0.000  Prec=0.000  Rec=0.000  AUC=nan
+
+✗ cool_elec_P 학습 실패: Run with UUID 84f95070da344f2a82d2a5e73d7542bd is already active. To start a new run, first end the current run with mlflow.end_run(). To start a nested run, call start_run with nested=True
+Traceback (most recent call last):
+  File "/workspace/LSTM/scripts/train/train_all_energy.py", line 559, in main
+    result = train_one_target(df, target)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/LSTM/scripts/train/train_all_energy.py", line 480, in train_one_target
+    with mlflow.start_run(run_name=target):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/mlflow/tracking/fluent.py", line 543, in start_run
+    raise Exception(
+Exception: Run with UUID 84f95070da344f2a82d2a5e73d7542bd is already active. To start a new run, first end the current run with mlflow.end_run(). To start a nested run, call start_run with nested=True
+
+============================================================
+  타겟: heat_P
+============================================================
+▶ VMD 분해 중 (K=4, alpha=2000)...
+/workspace/LSTM/scripts/train/train_all_energy.py:290: FutureWarning: ChainedAssignmentError: behaviour will change in pandas 3.0!
+You are setting values through chained assignment. Currently this works in certain cases, but when using Copy-on-Write (which will become the default behaviour in pandas 3.0) this will never work to update the original DataFrame or Series, because the intermediate object on which we are setting values will behave as a copy.
+A typical example is when you are setting values in a column of a DataFrame, like:
+
+df["col"][row_indexer] = value
+
+Use `df.loc[row_indexer, "col"] = values` instead, to perform the assignment in a single step and ensure this keeps updating the original `df`.
+
+See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
+
+  df[col].iloc[0] = 0
+/workspace/LSTM/scripts/train/train_all_energy.py:290: FutureWarning: ChainedAssignmentError: behaviour will change in pandas 3.0!
+You are setting values through chained assignment. Currently this works in certain cases, but when using Copy-on-Write (which will become the default behaviour in pandas 3.0) this will never work to update the original DataFrame or Series, because the intermediate object on which we are setting values will behave as a copy.
+A typical example is when you are setting values in a column of a DataFrame, like:
+
+df["col"][row_indexer] = value
+
+Use `df.loc[row_indexer, "col"] = values` instead, to perform the assignment in a single step and ensure this keeps updating the original `df`.
+
+See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
+
+  df[col].iloc[0] = 0
+/workspace/LSTM/scripts/train/train_all_energy.py:290: FutureWarning: ChainedAssignmentError: behaviour will change in pandas 3.0!
+You are setting values through chained assignment. Currently this works in certain cases, but when using Copy-on-Write (which will become the default behaviour in pandas 3.0) this will never work to update the original DataFrame or Series, because the intermediate object on which we are setting values will behave as a copy.
+A typical example is when you are setting values in a column of a DataFrame, like:
+
+df["col"][row_indexer] = value
+
+Use `df.loc[row_indexer, "col"] = values` instead, to perform the assignment in a single step and ensure this keeps updating the original `df`.
+
+See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
+
+  df[col].iloc[0] = 0
+/workspace/LSTM/scripts/train/train_all_energy.py:290: FutureWarning: ChainedAssignmentError: behaviour will change in pandas 3.0!
+You are setting values through chained assignment. Currently this works in certain cases, but when using Copy-on-Write (which will become the default behaviour in pandas 3.0) this will never work to update the original DataFrame or Series, because the intermediate object on which we are setting values will behave as a copy.
+A typical example is when you are setting values in a column of a DataFrame, like:
+
+df["col"][row_indexer] = value
+
+Use `df.loc[row_indexer, "col"] = values` instead, to perform the assignment in a single step and ensure this keeps updating the original `df`.
+
+See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
+
+  df[col].iloc[0] = 0
+▶ 피처 수: 21  (에너지 6 + 기상 2 + 시간 6 + VMD 4 + lag 3)
+  학습 : 2018-01-01 ~ 2021-12-31 (33,238행)
+  검증 : 2022-01-01   ~ 2022-12-31   (8,737행)
+  테스트: 2023-01-01 ~ 2023-12-31  (8,737행)
+▶ LSTM 학습 중 (epochs=100, early_stop=15, device=cuda)...
+  Epoch   1 | train=0.004592 | val=0.002107 | no_improve=0
+  Epoch  10 | train=0.000753 | val=0.000575 | no_improve=0
+  Epoch  20 | train=0.000644 | val=0.000513 | no_improve=4
+  Epoch  30 | train=0.000587 | val=0.000524 | no_improve=1
+  Epoch  40 | train=0.000597 | val=0.000462 | no_improve=5
+  Epoch  50 | train=0.000560 | val=0.000445 | no_improve=8
+  Epoch  60 | train=0.000558 | val=0.000437 | no_improve=1
+  Epoch  70 | train=0.000558 | val=0.000444 | no_improve=2
+  Epoch  80 | train=0.000546 | val=0.000433 | no_improve=3
+  Epoch  90 | train=0.000547 | val=0.000430 | no_improve=6
+  Epoch 100 | train=0.000543 | val=0.000425 | no_improve=0
+▶ 예측 평가 중...
+
+  val  MAE=25,204.4W  RMSE=33,905.5W  MAPE=111.74%
+  test MAE=21,920.2W  RMSE=33,222.4W  MAPE=125.23%
+  train 잔차 mean=26,184.2W  std=23,919.2W
+▶ Isolation Forest 학습 중...
+▶ 임계치 최적화 중 (val F1 기준)...
+  최적 k=0.5  val F1=0.373  threshold=38,143.8W
+  val  F1=0.373  Prec=0.272  Rec=0.595  AUC=0.524
+  test F1=0.000  Prec=0.000  Rec=0.000  AUC=nan
+
+✗ heat_P 학습 실패: Run with UUID 84f95070da344f2a82d2a5e73d7542bd is already active. To start a new run, first end the current run with mlflow.end_run(). To start a nested run, call start_run with nested=True
+Traceback (most recent call last):
+  File "/workspace/LSTM/scripts/train/train_all_energy.py", line 559, in main
+    result = train_one_target(df, target)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/LSTM/scripts/train/train_all_energy.py", line 480, in train_one_target
+    with mlflow.start_run(run_name=target):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/mlflow/tracking/fluent.py", line 543, in start_run
+    raise Exception(
+Exception: Run with UUID 84f95070da344f2a82d2a5e73d7542bd is already active. To start a new run, first end the current run with mlflow.end_run(). To start a nested run, call start_run with nested=True
+
+============================================================
+  타겟: chp_heat_P
+============================================================
+▶ VMD 분해 중 (K=4, alpha=2000)...
+/workspace/LSTM/scripts/train/train_all_energy.py:290: FutureWarning: ChainedAssignmentError: behaviour will change in pandas 3.0!
+You are setting values through chained assignment. Currently this works in certain cases, but when using Copy-on-Write (which will become the default behaviour in pandas 3.0) this will never work to update the original DataFrame or Series, because the intermediate object on which we are setting values will behave as a copy.
+A typical example is when you are setting values in a column of a DataFrame, like:
+
+df["col"][row_indexer] = value
+
+Use `df.loc[row_indexer, "col"] = values` instead, to perform the assignment in a single step and ensure this keeps updating the original `df`.
+
+See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
+
+  df[col].iloc[0] = 0
+/workspace/LSTM/scripts/train/train_all_energy.py:290: FutureWarning: ChainedAssignmentError: behaviour will change in pandas 3.0!
+You are setting values through chained assignment. Currently this works in certain cases, but when using Copy-on-Write (which will become the default behaviour in pandas 3.0) this will never work to update the original DataFrame or Series, because the intermediate object on which we are setting values will behave as a copy.
+A typical example is when you are setting values in a column of a DataFrame, like:
+
+df["col"][row_indexer] = value
+
+Use `df.loc[row_indexer, "col"] = values` instead, to perform the assignment in a single step and ensure this keeps updating the original `df`.
+
+See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
+
+  df[col].iloc[0] = 0
+/workspace/LSTM/scripts/train/train_all_energy.py:290: FutureWarning: ChainedAssignmentError: behaviour will change in pandas 3.0!
+You are setting values through chained assignment. Currently this works in certain cases, but when using Copy-on-Write (which will become the default behaviour in pandas 3.0) this will never work to update the original DataFrame or Series, because the intermediate object on which we are setting values will behave as a copy.
+A typical example is when you are setting values in a column of a DataFrame, like:
+
+df["col"][row_indexer] = value
+
+Use `df.loc[row_indexer, "col"] = values` instead, to perform the assignment in a single step and ensure this keeps updating the original `df`.
+
+See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
+
+  df[col].iloc[0] = 0
+/workspace/LSTM/scripts/train/train_all_energy.py:290: FutureWarning: ChainedAssignmentError: behaviour will change in pandas 3.0!
+You are setting values through chained assignment. Currently this works in certain cases, but when using Copy-on-Write (which will become the default behaviour in pandas 3.0) this will never work to update the original DataFrame or Series, because the intermediate object on which we are setting values will behave as a copy.
+A typical example is when you are setting values in a column of a DataFrame, like:
+
+df["col"][row_indexer] = value
+
+Use `df.loc[row_indexer, "col"] = values` instead, to perform the assignment in a single step and ensure this keeps updating the original `df`.
+
+See the caveats in the documentation: https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#returning-a-view-versus-a-copy
+
+  df[col].iloc[0] = 0
+▶ 피처 수: 21  (에너지 6 + 기상 2 + 시간 6 + VMD 4 + lag 3)
+  학습 : 2018-01-01 ~ 2021-12-31 (33,238행)
+  검증 : 2022-01-01   ~ 2022-12-31   (8,737행)
+  테스트: 2023-01-01 ~ 2023-12-31  (8,737행)
+▶ LSTM 학습 중 (epochs=100, early_stop=15, device=cuda)...
+  Epoch   1 | train=0.022636 | val=0.009221 | no_improve=0
+  Epoch  10 | train=0.005698 | val=0.002485 | no_improve=0
+  Epoch  20 | train=0.004573 | val=0.001840 | no_improve=0
+  Epoch  30 | train=0.002636 | val=0.001039 | no_improve=0
+  Epoch  40 | train=0.002016 | val=0.000802 | no_improve=0
+  Epoch  50 | train=0.001779 | val=0.000907 | no_improve=1
+  Epoch  60 | train=0.001571 | val=0.000714 | no_improve=2
+  Epoch  70 | train=0.001252 | val=0.000596 | no_improve=0
+  Epoch  80 | train=0.001154 | val=0.000702 | no_improve=1
+  Epoch  90 | train=0.000981 | val=0.000647 | no_improve=11
+  Early stopping at epoch 94
+▶ 예측 평가 중...
+
+  val  MAE=5,471.5W  RMSE=11,937.9W  MAPE=47.99%
+  test MAE=14,949.0W  RMSE=28,528.0W  MAPE=115.14%
+  train 잔차 mean=7,641.7W  std=11,862.1W
+▶ Isolation Forest 학습 중...
+▶ 임계치 최적화 중 (val F1 기준)...
+  최적 k=4.0  val F1=0.380  threshold=55,090.3W
+  val  F1=0.380  Prec=0.331  Rec=0.448  AUC=0.345
+  test F1=0.000  Prec=0.000  Rec=0.000  AUC=nan
+
+✗ chp_heat_P 학습 실패: Run with UUID 84f95070da344f2a82d2a5e73d7542bd is already active. To start a new run, first end the current run with mlflow.end_run(). To start a nested run, call start_run with nested=True
+Traceback (most recent call last):
+  File "/workspace/LSTM/scripts/train/train_all_energy.py", line 559, in main
+    result = train_one_target(df, target)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/LSTM/scripts/train/train_all_energy.py", line 480, in train_one_target
+    with mlflow.start_run(run_name=target):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/mlflow/tracking/fluent.py", line 543, in start_run
+    raise Exception(
+Exception: Run with UUID 84f95070da344f2a82d2a5e73d7542bd is already active. To start a new run, first end the current run with mlflow.end_run(). To start a nested run, call start_run with nested=True
+
+============================================================
+✓ 전체 완료
+target  val_mae  val_mape  test_mae  test_mape  val_f1
+grid_P  23773.6     23.25   30295.2      41.26  0.3437
+
+▶ 결과 저장: outputs/all_energy_results.csv
+▶ 모델 경로: outputs/models/energy/{target}/

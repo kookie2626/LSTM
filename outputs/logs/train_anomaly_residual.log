@@ -1,0 +1,32 @@
+/usr/local/lib/python3.12/dist-packages/mlflow/tracking/_tracking_service/utils.py:184: FutureWarning: The filesystem tracking backend (e.g., './mlruns') is deprecated as of February 2026. Consider transitioning to a database backend (e.g., 'sqlite:///mlflow.db') to take advantage of the latest MLflow features. See https://mlflow.org/docs/latest/self-hosting/migrate-from-file-store for migration guidance.
+  return FileStore(store_uri, store_uri)
+2026/05/20 02:47:13 INFO mlflow.tracking.fluent: Experiment with name 'Residual-IF-Anomaly' does not exist. Creating a new experiment.
+▶ 디바이스: cuda
+▶ 데이터 로드 중...
+/workspace/project/ML/data_loader.py:59: UserWarning: pandas only supports SQLAlchemy connectable (engine/connection) or database string URI or sqlite3 DBAPI2 connection. Other DBAPI2 objects are not tested. Please consider using SQLAlchemy.
+  return pd.read_sql(sql, conn)
+▶ VMD 분해 중...
+  학습 : 2018-01-01 ~ 2021-12-31
+  검증 : 2022-01-01 ~ 2022-12-31
+  테스트: 2023-01-01 ~ 2023-12-31
+▶ 잔차 계산 중 (train)...
+▶ 잔차 계산 중 (val)...
+▶ 잔차 계산 중 (test)...
+
+  train 잔차  mean=19784.5 W  std=28837.3 W
+▶ Isolation Forest 학습 중...
+▶ 임계치 최적화 중 (val F1 기준)...
+  최적 k=0.5  val F1=0.325  threshold=34203.2 W
+
+▶ val 이상탐지 결과
+  전체 8,713개 | 이상 pseudo-label: 1,680개 (19.3%)
+  탐지: HIGH=1,006  LOW=1,672  NORMAL=6,035
+  [val] Acc=0.663  Prec=0.265  Rec=0.422  F1=0.325  AUC=0.543
+
+▶ test 이상탐지 결과
+  전체 8,713개 | 이상 pseudo-label: 0개 (0.0%)
+  탐지: HIGH=1,179  LOW=2,145  NORMAL=5,389
+  [test] Acc=0.619  Prec=0.000  Rec=0.000  F1=0.000  AUC=nan
+
+▶ 임계치 저장: outputs/models/residual_threshold.pkl
+▶ IF 모델 저장: outputs/models/residual_iforest.pkl
